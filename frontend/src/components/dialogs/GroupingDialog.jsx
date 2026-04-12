@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import React, { useEffect, useState } from "react";
 import {
   DialogContainer,
   Dialog,
@@ -22,13 +22,26 @@ import { useFilter } from "react-aria-components";
 import { style } from "@react-spectrum/s2/style" with { type: "macro" };
 
 const GroupingDialog = ({ isOpen, onClose, selectedKeys, onConfirm }) => {
-  if (!isOpen) return null;
-
   const { contains } = useFilter({ sensitivity: "base" });
   const selectedArray =
-    selectedKeys === "all" ? ["ALL"] : [...selectedKeys];
+    selectedKeys === "all" ? ["ALL"] : [...(selectedKeys || [])];
 
   const [groupName, setGroupName] = useState("");
+  const [existingGroup, setExistingGroup] = useState("");
+
+  useEffect(() => {
+    if (isOpen) {
+      setGroupName("");
+      setExistingGroup("");
+    }
+  }, [isOpen]);
+
+  if (!isOpen) return null;
+
+  const trimmedGroupName = groupName.trim();
+  const hasNewGroupName = trimmedGroupName.length > 0;
+  const hasExistingGroup = existingGroup.length > 0;
+  const selectedGroupName = hasExistingGroup ? existingGroup : trimmedGroupName;
 
   return (
     <DialogContainer onDismiss={onClose}>
@@ -48,19 +61,33 @@ const GroupingDialog = ({ isOpen, onClose, selectedKeys, onConfirm }) => {
             <TextField
               label="Group Name"
               value={groupName}
-              onChange={setGroupName}
+              isDisabled={hasExistingGroup}
+              onChange={(value) => {
+                setGroupName(value);
+                if (value.trim()) {
+                  setExistingGroup("");
+                }
+              }}
             />
 
             <MenuTrigger>
-              <ActionButton>
-                Add to existing group...
+              <ActionButton isDisabled={hasNewGroupName}>
+                {hasExistingGroup
+                  ? `Existing group: ${existingGroup}`
+                  : "Add to existing group..."}
               </ActionButton>
 
               <Popover aria-label="Select a tag">
                 <Autocomplete filter={contains}>
                   <SearchField aria-label="Search tags" autoFocus />
 
-                  <Menu styles={style({ marginTop: 8 })}>
+                  <Menu
+                    styles={style({ marginTop: 8 })}
+                    onAction={(key) => {
+                      setExistingGroup(String(key));
+                      setGroupName("");
+                    }}
+                  >
                     <MenuItem key="news">News</MenuItem>
                     <MenuItem key="travel">Travel</MenuItem>
                     <MenuItem key="shopping">Shopping</MenuItem>
@@ -74,6 +101,10 @@ const GroupingDialog = ({ isOpen, onClose, selectedKeys, onConfirm }) => {
                 </Autocomplete>
               </Popover>
             </MenuTrigger>
+
+            {hasExistingGroup ? (
+              <Text>Adding to existing group: {existingGroup}</Text>
+            ) : null}
           </Form>
         </Content>
 
@@ -84,10 +115,11 @@ const GroupingDialog = ({ isOpen, onClose, selectedKeys, onConfirm }) => {
 
           <Button
             variant="accent"
+            isDisabled={!selectedGroupName}
             onPress={() => {
               onConfirm({
                 selected: selectedArray,
-                groupName,
+                groupName: selectedGroupName,
               });
               onClose();
             }}
