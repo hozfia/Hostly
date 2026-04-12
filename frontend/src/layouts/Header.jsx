@@ -6,7 +6,7 @@ import Cancel from '@react-spectrum/s2/icons/Cancel';
 
 
 
-const Header = () => {
+const Header = ({ onSavePress }) => {
   const [search, setSearch] = React.useState("");
 
   return (
@@ -46,7 +46,7 @@ const Header = () => {
           display: "flex",
           gap: 8
         })}>
-          <ActionButton>
+          <ActionButton onPress={onSavePress}>
           <RocketQuickActions />
           <Text>Save</Text>
             </ActionButton>

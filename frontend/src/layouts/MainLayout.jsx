@@ -5,6 +5,7 @@ import { style } from "@react-spectrum/s2/style" with { type: "macro" };
 import Header from "./Header";
 import Sidebar from "./Sidebar";
 import ContentTable from "../components/ContentTable";
+import CommitDialog from "../components/dialogs/CommitDialog";
 import Folder from "@react-spectrum/s2/icons/Folder";
 import File from "@react-spectrum/s2/icons/File";
 import Footer from "./Footer";
@@ -13,6 +14,7 @@ import Footer from "./Footer";
 const MainLayout = () => {
     const [selectedKeys, setSelectedKeys] = useState(new Set());
     const [currentSelectedItems, setCurrentSelectedItems] = useState([]);
+    const [isCommitDialogOpen, setIsCommitDialogOpen] = useState(false);
     
 
     // ✅ THIS is your real data
@@ -75,7 +77,7 @@ const MainLayout = () => {
                 height: "100vh",
             })}
         >
-            <Header />
+            <Header onSavePress={() => setIsCommitDialogOpen(true)} />
 
             <div className={style({ display: "flex", flex: 1 })}>
             <Sidebar
@@ -94,6 +96,14 @@ const MainLayout = () => {
                     onConfirmGrouping={handleConfirmGrouping}
                 />
             </div>
+            <CommitDialog
+                isOpen={isCommitDialogOpen}
+                onClose={() => setIsCommitDialogOpen(false)}
+                selectedKeys={selectedKeys}
+                onConfirm={(selected) => {
+                    console.log("Commit selected items:", selected);
+                }}
+            />
             {/* <Footer /> */}
         </div>
     );
