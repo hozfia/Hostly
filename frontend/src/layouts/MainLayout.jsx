@@ -1,5 +1,5 @@
 import React, { useState } from "react";
-import { Content } from "@react-spectrum/s2";
+import { Content, ToastContainer, ToastQueue } from "@react-spectrum/s2";
 import { style } from "@react-spectrum/s2/style" with { type: "macro" };
 
 import Header from "./Header";
@@ -102,8 +102,10 @@ const MainLayout = () => {
                 selectedKeys={selectedKeys}
                 onConfirm={(selected) => {
                     console.log("Commit selected items:", selected);
+                    ToastQueue.positive("Commit completed successfully.");
                 }}
             />
+            <ToastContainer />
             {/* <Footer /> */}
         </div>
     );

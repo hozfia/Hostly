@@ -1,4 +1,4 @@
-import React from "react";
+import React, { useEffect, useState } from "react";
 import {
   DialogContainer,
   FullscreenDialog,
@@ -12,6 +12,7 @@ import {
 } from "@react-spectrum/s2";
 
 import { style } from "@react-spectrum/s2/style" with { type: "macro" };
+import CommitProgressDialog from "./CommitProgressDialog";
 
 const listStyles = style({
   display: "flex",
@@ -38,13 +39,36 @@ const CommitDialog = ({
   title = "Commit Changes",
   description = "Review the current selection before continuing.",
 }) => {
-  if (!isOpen) return null;
+  const [isProgressOpen, setIsProgressOpen] = useState(false);
 
   const selectedItems =
     selectedKeys === "all" ? ["ALL"] : [...(selectedKeys || [])];
 
   const selectionLabel =
     selectedItems.length === 1 ? "Selected item" : "Selected items";
+
+  useEffect(() => {
+    if (!isOpen) {
+      setIsProgressOpen(false);
+    }
+  }, [isOpen]);
+
+  if (!isOpen) return null;
+
+  if (isProgressOpen) {
+    return (
+      <CommitProgressDialog
+        isOpen={isProgressOpen}
+        onClose={() => {
+          setIsProgressOpen(false);
+          onClose?.();
+        }}
+        onComplete={() => {
+          onConfirm?.(selectedItems);
+        }}
+      />
+    );
+  }
 
   return (
     <DialogContainer onDismiss={onClose}>
@@ -86,9 +110,9 @@ const CommitDialog = ({
 
               <Button
                 variant="accent"
+                isDisabled={selectedItems.length === 0}
                 onPress={() => {
-                  onConfirm?.(selectedItems);
-                  close();
+                  setIsProgressOpen(true);
                 }}
               >
                 Continue
