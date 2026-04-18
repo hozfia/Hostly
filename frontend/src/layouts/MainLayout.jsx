@@ -292,14 +292,8 @@ const MainLayout = () => {
     }
   };
 
-  const clearHostsData = () => {
-    setHostEntries([]);
-    setSelectedFilePath("");
-    setSelectedFileName("");
-    setLoadError("");
-    setSelectedKeys(new Set());
+  const clearCurrentSelectedHosts = () => {
     setCurrentSelectedItems([]);
-    setItems([]);
   };
 
   useEffect(() => {
@@ -437,7 +431,7 @@ const MainLayout = () => {
         onOpenHostsPress={() => {
           void openHostsFile();
         }}
-        onClearPress={clearHostsData}
+        onClearPress={clearCurrentSelectedHosts}
       />
 
       <div className={style({ display: "flex", flex: 1 })}>
