@@ -3,10 +3,9 @@ import { Text, ActionButton, SearchField } from "@react-spectrum/s2";
 import { style } from "@react-spectrum/s2/style" with { type: "macro" };
 import RocketQuickActions from '@react-spectrum/s2/icons/RocketQuickActions';
 import Cancel from '@react-spectrum/s2/icons/Cancel';
+import Folder from '@react-spectrum/s2/icons/Folder';
 
-
-
-const Header = ({ onSavePress }) => {
+const Header = ({ onSavePress, onOpenHostsPress, onClearPress }) => {
   const [search, setSearch] = React.useState("");
 
   return (
@@ -46,11 +45,15 @@ const Header = ({ onSavePress }) => {
           display: "flex",
           gap: 8
         })}>
+          <ActionButton onPress={onOpenHostsPress}>
+            <Folder />
+            <Text>Open Hosts</Text>
+          </ActionButton>
           <ActionButton onPress={onSavePress}>
           <RocketQuickActions />
           <Text>Save</Text>
             </ActionButton>
-            <ActionButton>
+            <ActionButton onPress={onClearPress}>
           <Cancel />
           <Text>Clear</Text>
             </ActionButton>

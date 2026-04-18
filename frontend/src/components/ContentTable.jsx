@@ -11,95 +11,100 @@ import {
   Text,
 } from "@react-spectrum/s2";
 
-import Interaction from "@react-spectrum/s2/icons/Interaction";
 import Tag from "@react-spectrum/s2/icons/Tag";
-import Edit from "@react-spectrum/s2/icons/Edit";
+import Folder from "@react-spectrum/s2/icons/Folder";
 
 import { style } from "@react-spectrum/s2/style" with { type: "macro" };
 
 import GroupingDialog from "./dialogs/GroupingDialog";
 
-const ContentTable = ({ selected, setSelected, onConfirmGrouping }) => {
+const ContentTable = ({
+  rows,
+  selected,
+  setSelected,
+  onConfirmGrouping,
+  existingGroups,
+  filePath,
+  fileName,
+  isLoading,
+  errorMessage,
+  onOpenHostsFile,
+}) => {
   const [groupingOpen, setGroupingOpen] = useState(false);
+  const hasRows = rows.length > 0;
 
   return (
     <>
-      <TableView
-        aria-label="Favorite pokemon"
-        styles={style({
+      <div
+        className={style({
+          display: "flex",
+          flexDirection: "column",
+          gap: 12,
           width: "100%",
-          height: "100%",
-          flex: 1,
           minWidth: 0,
+          flex: 1,
+          padding: 16,
+
+          height: "87vh",     // 👈 lock to screen height
+          overflow: "hidden",  // 👈 prevent growing
         })}
-        selectionMode="multiple"
-        selectedKeys={selected}
-        onSelectionChange={setSelected}
-        onAction={(key) => alert(`Clicked ${key}`)}
-        renderActionBar={(selectedKeys) => {
-          const selection =
-            selectedKeys === "all"
-              ? "all"
-              : [...selectedKeys].join(", ");
-
-          return (
-            <ActionBar>
-              <ActionButton onPress={() => alert(`Activate ${selection}`)}>
-                <Interaction />
-                <Text>Activate</Text>
-              </ActionButton>
-
-              <ActionButton onPress={() => setGroupingOpen(true)}>
-                <Tag />
-                <Text>Grouping</Text>
-              </ActionButton>
-
-              <ActionButton onPress={() => alert(`Edit ${selection}`)}>
-                <Edit />
-                <Text>Edit</Text>
-              </ActionButton>
-            </ActionBar>
-          );
-        }}
       >
-        <TableHeader>
-          <Column isRowHeader>Name</Column>
-          <Column>Type</Column>
-          <Column>Level</Column>
-        </TableHeader>
+        {/* Scroll container */}
+        <div
+          className={style({
+            flex: 1,
+            minHeight: 0,      // 👈 critical for scroll to work
+            overflow: "auto",  // 👈 enables scrolling
+          })}
+        >
+          <TableView
+            aria-label="Hosts file entries"
+            styles={style({
+              width: "100%",
+              height: "100%", // fills scroll container
+            })}
+            selectionMode="multiple"
+            selectedKeys={selected}
+            onSelectionChange={setSelected}
+            renderActionBar={() => (
+              <ActionBar>
+                <ActionButton onPress={() => setGroupingOpen(true)}>
+                  <Tag />
+                  <Text>Grouping</Text>
+                </ActionButton>
+              </ActionBar>
+            )}
+          >
+            <TableHeader>
+              <Column isRowHeader>Hostnames</Column>
+              <Column>IP Address</Column>
+              <Column>Status</Column>
+              <Column>Comment</Column>
+            </TableHeader>
 
-        <TableBody>
-          <Row id="charizard">
-            <Cell>Charizard</Cell>
-            <Cell>Fire, Flying</Cell>
-            <Cell>67</Cell>
-          </Row>
-
-          <Row id="blastoise">
-            <Cell>Blastoise</Cell>
-            <Cell>Water</Cell>
-            <Cell>56</Cell>
-          </Row>
-
-          <Row id="venusaur" isDisabled>
-            <Cell>Venusaur</Cell>
-            <Cell>Grass, Poison</Cell>
-            <Cell>83</Cell>
-          </Row>
-
-          <Row id="pikachu">
-            <Cell>Pikachu</Cell>
-            <Cell>Electric</Cell>
-            <Cell>100</Cell>
-          </Row>
-        </TableBody>
-      </TableView>
+            <TableBody>
+              {hasRows
+                ? rows.map((row) => (
+                    <Row id={row.id} key={row.id}>
+                      <Cell>{row.hostnameLabel}</Cell>
+                      <Cell>{row.ip}</Cell>
+                      <Cell>{row.disabled ? "Disabled" : "Active"}</Cell>
+                      <Cell>{row.comment || "-"}</Cell>
+                    </Row>
+                  ))
+                : null}
+            </TableBody>
+          </TableView>
+        </div>
+      </div>
 
       <GroupingDialog
         isOpen={groupingOpen}
         onClose={() => setGroupingOpen(false)}
         selectedKeys={selected}
+        rows={rows}
         onConfirm={onConfirmGrouping}
+        existingGroups={existingGroups}
       />
     </>
   );

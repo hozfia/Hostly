@@ -1,15 +1,8 @@
-import React, { useState } from "react";
-import {
-  ListView,
-  ListViewItem,
-  Text,
-  Switch,
-} from "@react-spectrum/s2";
+import React from "react";
+import { ListView, ListViewItem, Text, Switch } from "@react-spectrum/s2";
 import { style } from "@react-spectrum/s2/style" with { type: "macro" };
 
-const CurrentSelected = ({ items = [] }) => {
-  const [activeItems, setActiveItems] = useState({});
-
+const CurrentSelected = ({ items = [], onToggleItemActive }) => {
   return (
     <ListView
       aria-label="Selected Items"
@@ -46,7 +39,8 @@ const CurrentSelected = ({ items = [] }) => {
               >
                 {item.children
                   ? `${item.children.length} items in group`
-                  : "Single item"}
+                  : "Single item"}{" "}
+                - {item.isActive ? "Active" : "Inactive"}
               </Text>
             </div>
 
@@ -54,12 +48,9 @@ const CurrentSelected = ({ items = [] }) => {
             <Switch
               aria-label={`Toggle ${item.name}`}
               isEmphasized
-              // isSelected={!!activeItems[item.id]}
+              isSelected={!!item.isActive}
               onChange={(value) => {
-                setActiveItems((prev) => ({
-                  ...prev,
-                  [item.id]: value,
-                }));
+                onToggleItemActive?.(item.id, value);
               }}
             />
           </div>

@@ -1,0 +1,68 @@
+export namespace hosts {
+	
+	export class HostEntry {
+	    line: number;
+	    raw: string;
+	    ip: string;
+	    hostnames: string[];
+	    comment?: string;
+	    disabled: boolean;
+	
+	    static createFrom(source: any = {}) {
+	        return new HostEntry(source);
+	    }
+	
+	    constructor(source: any = {}) {
+	        if ('string' === typeof source) source = JSON.parse(source);
+	        this.line = source["line"];
+	        this.raw = source["raw"];
+	        this.ip = source["ip"];
+	        this.hostnames = source["hostnames"];
+	        this.comment = source["comment"];
+	        this.disabled = source["disabled"];
+	    }
+	}
+
+}
+
+export namespace main {
+	
+	export class ParsedHostsSelection {
+	    path: string;
+	    fileName: string;
+	    entries: hosts.HostEntry[];
+	    cancelled: boolean;
+	
+	    static createFrom(source: any = {}) {
+	        return new ParsedHostsSelection(source);
+	    }
+	
+	    constructor(source: any = {}) {
+	        if ('string' === typeof source) source = JSON.parse(source);
+	        this.path = source["path"];
+	        this.fileName = source["fileName"];
+	        this.entries = this.convertValues(source["entries"], hosts.HostEntry);
+	        this.cancelled = source["cancelled"];
+	    }
+	
+		convertValues(a: any, classs: any, asMap: boolean = false): any {
+		    if (!a) {
+		        return a;
+		    }
+		    if (a.slice && a.map) {
+		        return (a as any[]).map(elem => this.convertValues(elem, classs));
+		    } else if ("object" === typeof a) {
+		        if (asMap) {
+		            for (const key of Object.keys(a)) {
+		                a[key] = new classs(a[key]);
+		            }
+		            return a;
+		        }
+		        return new classs(a);
+		    }
+		    return a;
+		}
+	}
+
+}
+

@@ -1,10 +1,14 @@
 import React from "react";
 import { View, Flex } from "@adobe/react-spectrum";
-import SidebarItem from "../components/Labels";
 import CurrentSelected from "../components/CurrentSelected"
 import Labels from "../components/Labels"
 
-const Sidebar = ({ items, onAddToCurrent, currentSelectedItems }) => {
+const Sidebar = ({
+  items,
+  onAddToCurrent,
+  currentSelectedItems,
+  onToggleCurrentItemActive,
+}) => {
 
 
   return (
@@ -20,7 +24,10 @@ const Sidebar = ({ items, onAddToCurrent, currentSelectedItems }) => {
       // padding="size-200"
     >
       <Flex direction="column" gap="size-150">
-      <CurrentSelected items={currentSelectedItems} />
+      <CurrentSelected
+        items={currentSelectedItems}
+        onToggleItemActive={onToggleCurrentItemActive}
+      />
         <Labels items={items} onAddToCurrent={onAddToCurrent} />
       </Flex>
     </View>

@@ -34,18 +34,15 @@ const itemStyles = style({
 const CommitDialog = ({
   isOpen,
   onClose,
-  selectedKeys,
+  items = [],
   onConfirm,
   title = "Commit Changes",
-  description = "Review the current selection before continuing.",
+  description = "Review the current sidebar selection before continuing.",
 }) => {
   const [isProgressOpen, setIsProgressOpen] = useState(false);
 
-  const selectedItems =
-    selectedKeys === "all" ? ["ALL"] : [...(selectedKeys || [])];
-
-  const selectionLabel =
-    selectedItems.length === 1 ? "Selected item" : "Selected items";
+  const selectedItems = items;
+  const selectionLabel = selectedItems.length === 1 ? "Selected item" : "Selected items";
 
   useEffect(() => {
     if (!isOpen) {
@@ -88,8 +85,21 @@ const CommitDialog = ({
               {selectedItems.length > 0 ? (
                 <div className={listStyles}>
                   {selectedItems.map((item) => (
-                    <div key={item} className={itemStyles}>
-                      <Text>{item}</Text>
+                    <div key={item.id} className={itemStyles}>
+                      <Text>{item.name}</Text>
+                      <Text
+                        UNSAFE_style={{
+                          display: "block",
+                          fontSize: "0.9rem",
+                          color: "gray",
+                          marginTop: 4,
+                        }}
+                      >
+                        {item.children
+                          ? `${item.children.length} items in group`
+                          : "Single item"}{" "}
+                        - {item.isActive ? "Active" : "Inactive"}
+                      </Text>
                     </div>
                   ))}
                 </div>

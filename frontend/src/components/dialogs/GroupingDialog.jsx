@@ -21,10 +21,24 @@ import {
 import { useFilter } from "react-aria-components";
 import { style } from "@react-spectrum/s2/style" with { type: "macro" };
 
-const GroupingDialog = ({ isOpen, onClose, selectedKeys, onConfirm }) => {
+const GroupingDialog = ({
+  isOpen,
+  onClose,
+  selectedKeys,
+  rows = [],
+  onConfirm,
+  existingGroups = [],
+}) => {
   const { contains } = useFilter({ sensitivity: "base" });
   const selectedArray =
     selectedKeys === "all" ? ["ALL"] : [...(selectedKeys || [])];
+  const selectedLabels =
+    selectedKeys === "all"
+      ? rows.map((row) => row.hostnameLabel)
+      : selectedArray.map(
+          (selectedKey) =>
+            rows.find((row) => row.id === selectedKey)?.hostnameLabel || selectedKey
+        );
 
   const [groupName, setGroupName] = useState("");
   const [existingGroup, setExistingGroup] = useState("");
@@ -54,7 +68,7 @@ const GroupingDialog = ({ isOpen, onClose, selectedKeys, onConfirm }) => {
           </p>
 
           <Text>
-            Selected items: {selectedArray.join(", ")}
+            Selected items: {selectedLabels.join(", ")}
           </Text>
 
           <Form>
@@ -84,19 +98,20 @@ const GroupingDialog = ({ isOpen, onClose, selectedKeys, onConfirm }) => {
                   <Menu
                     styles={style({ marginTop: 8 })}
                     onAction={(key) => {
+                      if (key === "no-groups") {
+                        return;
+                      }
                       setExistingGroup(String(key));
                       setGroupName("");
                     }}
                   >
-                    <MenuItem key="news">News</MenuItem>
-                    <MenuItem key="travel">Travel</MenuItem>
-                    <MenuItem key="shopping">Shopping</MenuItem>
-                    <MenuItem key="business">Business</MenuItem>
-                    <MenuItem key="entertainment">Entertainment</MenuItem>
-                    <MenuItem key="food">Food</MenuItem>
-                    <MenuItem key="technology">Technology</MenuItem>
-                    <MenuItem key="health">Health</MenuItem>
-                    <MenuItem key="science">Science</MenuItem>
+                    {existingGroups.length > 0 ? (
+                      existingGroups.map((groupName) => (
+                        <MenuItem key={groupName}>{groupName}</MenuItem>
+                      ))
+                    ) : (
+                      <MenuItem key="no-groups">No groups available</MenuItem>
+                    )}
                   </Menu>
                 </Autocomplete>
               </Popover>
