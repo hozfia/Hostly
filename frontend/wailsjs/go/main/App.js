@@ -6,6 +6,10 @@ export function Greet(arg1) {
   return window['go']['main']['App']['Greet'](arg1);
 }
 
+export function SaveHostsSelection(arg1, arg2) {
+  return window['go']['main']['App']['SaveHostsSelection'](arg1, arg2);
+}
+
 export function SelectHostsFile() {
   return window['go']['main']['App']['SelectHostsFile']();
 }

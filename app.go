@@ -3,12 +3,12 @@ package main
 import (
 	"context"
 	"fmt"
+	"os"
 	"path/filepath"
 	goruntime "runtime"
+	"strings"
 
 	"hostly/hosts"
-
-	wailsruntime "github.com/wailsapp/wails/v2/pkg/runtime"
 )
 
 // App struct
@@ -21,6 +21,30 @@ type ParsedHostsSelection struct {
 	FileName  string            `json:"fileName"`
 	Entries   []hosts.HostEntry `json:"entries"`
 	Cancelled bool              `json:"cancelled"`
+}
+
+type SaveHostsSelectionEntry struct {
+	ID        string   `json:"id"`
+	EntryID   string   `json:"entryId"`
+	Line      int      `json:"line"`
+	Name      string   `json:"name"`
+	IP        string   `json:"ip"`
+	Hostnames []string `json:"hostnames"`
+	Comment   string   `json:"comment,omitempty"`
+	IsActive  bool     `json:"isActive"`
+}
+
+type SaveHostsSelectionItem struct {
+	ID                    string                    `json:"id"`
+	EntryID               string                    `json:"entryId,omitempty"`
+	Line                  int                       `json:"line,omitempty"`
+	Name                  string                    `json:"name"`
+	IP                    string                    `json:"ip,omitempty"`
+	Hostnames             []string                  `json:"hostnames,omitempty"`
+	Comment               string                    `json:"comment,omitempty"`
+	IsActive              bool                      `json:"isActive"`
+	HasPendingStateChange bool                      `json:"hasPendingStateChange"`
+	Children              []SaveHostsSelectionEntry `json:"children,omitempty"`
 }
 
 // NewApp creates a new App application struct
@@ -40,30 +64,14 @@ func (a *App) Greet(name string) string {
 }
 
 func (a *App) SelectHostsFile() (ParsedHostsSelection, error) {
-	selectedPath, err := wailsruntime.OpenFileDialog(a.ctx, wailsruntime.OpenDialogOptions{
-		Title:            "Select a hosts file",
-		DefaultDirectory: defaultHostsDirectory(),
-		Filters: []wailsruntime.FileFilter{
-			{
-				DisplayName: "Hosts files",
-				Pattern:     "hosts;*.txt;*.conf",
-			},
-		},
-	})
-	if err != nil {
-		return ParsedHostsSelection{}, fmt.Errorf("open hosts file dialog: %w", err)
-	}
-
-	if selectedPath == "" {
-		return ParsedHostsSelection{
-			Entries:   []hosts.HostEntry{},
-			Cancelled: true,
-		}, nil
+	selectedPath := defaultHostsFilePath()
+	if strings.TrimSpace(selectedPath) == "" {
+		return ParsedHostsSelection{}, fmt.Errorf("could not resolve the default hosts file path")
 	}
 
 	parsed, err := hosts.ParseHostsFile(selectedPath)
 	if err != nil {
-		return ParsedHostsSelection{}, fmt.Errorf("parse hosts file: %w", err)
+		return ParsedHostsSelection{}, fmt.Errorf("open default hosts file: %w", err)
 	}
 
 	return ParsedHostsSelection{
@@ -74,11 +82,69 @@ func (a *App) SelectHostsFile() (ParsedHostsSelection, error) {
 	}, nil
 }
 
-func defaultHostsDirectory() string {
+func (a *App) SaveHostsSelection(path string, items []SaveHostsSelectionItem) (ParsedHostsSelection, error) {
+	if strings.TrimSpace(path) == "" {
+		return ParsedHostsSelection{}, fmt.Errorf("no hosts file path available for saving")
+	}
+
+	entryStates := make(map[int]bool)
+	for _, item := range items {
+		if len(item.Children) > 0 {
+			for _, child := range item.Children {
+				if child.Line <= 0 {
+					continue
+				}
+
+				isActive := child.IsActive
+				if item.HasPendingStateChange {
+					isActive = item.IsActive
+				}
+
+				entryStates[child.Line] = isActive
+			}
+			continue
+		}
+
+		if item.Line > 0 {
+			entryStates[item.Line] = item.IsActive
+		}
+	}
+
+	if err := hosts.ApplyEntryStatesToFile(path, entryStates); err != nil {
+		return ParsedHostsSelection{}, err
+	}
+
+	parsed, err := hosts.ParseHostsFile(path)
+	if err != nil {
+		return ParsedHostsSelection{}, fmt.Errorf("parse saved hosts file: %w", err)
+	}
+
+	return ParsedHostsSelection{
+		Path:      path,
+		FileName:  filepath.Base(path),
+		Entries:   parsed.Entries,
+		Cancelled: false,
+	}, nil
+}
+
+func defaultHostsFilePath() string {
 	switch goruntime.GOOS {
 	case "windows":
-		return `C:\Windows\System32\drivers\etc`
+		return firstExistingPath(`C:\Windows\System32\drivers\etc\hosts`)
+	case "darwin":
+		return firstExistingPath("/private/etc/hosts", "/etc/hosts")
 	default:
-		return "/etc"
+		return firstExistingPath("/etc/hosts")
 	}
+}
+
+func firstExistingPath(paths ...string) string {
+	for _, path := range paths {
+		_, err := os.Stat(path)
+		if err == nil {
+			return path
+		}
+	}
+
+	return ""
 }

@@ -1,7 +1,7 @@
 import React, { useEffect, useRef, useState } from "react";
 import { ToastContainer, ToastQueue } from "@react-spectrum/s2";
 import { style } from "@react-spectrum/s2/style" with { type: "macro" };
-import { SelectHostsFile } from "../../wailsjs/go/main/App";
+import { SaveHostsSelection, SelectHostsFile } from "../../wailsjs/go/main/App";
 
 import Header from "./Header";
 import Sidebar from "./Sidebar";
@@ -9,7 +9,6 @@ import ContentTable from "../components/ContentTable";
 import CommitDialog from "../components/dialogs/CommitDialog";
 import Folder from "@react-spectrum/s2/icons/Folder";
 import File from "@react-spectrum/s2/icons/File";
-import { parseHostsContent } from "../utils/hostsParser";
 
 const MainLayout = () => {
   const [searchValue, setSearchValue] = useState("");
@@ -23,14 +22,88 @@ const MainLayout = () => {
   const [isLoadingHostsFile, setIsLoadingHostsFile] = useState(false);
   const [items, setItems] = useState([]);
   const hasRequestedInitialFile = useRef(false);
-  const fileInputRef = useRef(null);
   const isOpeningFileRef = useRef(false);
 
-  const tableRows = hostEntries.map((entry) => ({
+  const mapEntryToTableRow = (entry) => ({
     ...entry,
     id: `entry-${entry.line}`,
     hostnameLabel: entry.hostnames.join(", "),
-  }));
+  });
+
+  const createEntryItem = (row, id = row.id) => ({
+    id,
+    entryId: row.id,
+    line: row.line,
+    name: row.hostnameLabel,
+    icon: <File />,
+    ip: row.ip,
+    hostnames: [...row.hostnames],
+    comment: row.comment || "",
+    raw: row.raw,
+    disabled: row.disabled,
+    isActive: !row.disabled,
+    hasPendingStateChange: false,
+  });
+
+  const createGroupItem = (groupId, groupName, children) => ({
+    id: groupId,
+    name: groupName || "New Group",
+    icon: <Folder />,
+    isActive: children.every((child) => child.isActive),
+    hasPendingStateChange: false,
+    children,
+  });
+
+  const cloneSidebarItem = (item) => ({
+    ...item,
+    hostnames: item.hostnames ? [...item.hostnames] : undefined,
+    children: item.children
+      ? item.children.map((child) => cloneSidebarItem(child))
+      : undefined,
+    isActive: item.children?.length
+      ? item.children.every((child) => child.isActive)
+      : !!item.isActive,
+    hasPendingStateChange: false,
+  });
+
+  const syncItemWithEntries = (item, nextRowsByLine) => {
+    if (item.children?.length) {
+      const nextChildren = item.children.map((child) =>
+        syncItemWithEntries(child, nextRowsByLine)
+      );
+
+      return {
+        ...item,
+        children: nextChildren,
+        isActive: nextChildren.every((child) => child.isActive),
+        hasPendingStateChange: false,
+      };
+    }
+
+    const nextRow = nextRowsByLine.get(item.line);
+    if (!nextRow) {
+      return {
+        ...item,
+        hasPendingStateChange: false,
+      };
+    }
+
+    return {
+      ...item,
+      entryId: nextRow.id,
+      line: nextRow.line,
+      name: nextRow.hostnameLabel,
+      ip: nextRow.ip,
+      hostnames: [...nextRow.hostnames],
+      comment: nextRow.comment || "",
+      raw: nextRow.raw,
+      disabled: nextRow.disabled,
+      isActive: !nextRow.disabled,
+      hasPendingStateChange: false,
+    };
+  };
+
+  const tableRows = hostEntries.map((entry) => mapEntryToTableRow(entry));
   const normalizedSearchValue = searchValue.trim().toLowerCase();
 
   const itemMatchesSearch = (item, searchTerm) => {
@@ -63,6 +136,20 @@ const MainLayout = () => {
     ? items.filter((item) => itemMatchesSearch(item, normalizedSearchValue))
     : items;
 
+  const applySavedHostsSelection = (result) => {
+    const nextEntries = result.entries || [];
+    const nextRows = nextEntries.map((entry) => mapEntryToTableRow(entry));
+    const nextRowsByLine = new Map(nextRows.map((row) => [row.line, row]));
+
+    setHostEntries(nextEntries);
+    setSelectedFilePath(result.path || "");
+    setSelectedFileName(result.fileName || "");
+    setItems((prev) => prev.map((item) => syncItemWithEntries(item, nextRowsByLine)));
+    setCurrentSelectedItems((prev) =>
+      prev.map((item) => syncItemWithEntries(item, nextRowsByLine))
+    );
+  };
+
   const applyHostsSelection = (result) => {
     setHostEntries(result.entries || []);
     setSelectedFilePath(result.path || "");
@@ -75,25 +162,12 @@ const MainLayout = () => {
     });
   };
 
-  const openBrowserFilePicker = () => {
-    fileInputRef.current?.click();
-  };
-
-  const openHostsFile = async ({ allowBrowserFallback = true } = {}) => {
+  const openHostsFile = async () => {
     if (isOpeningFileRef.current) {
       return;
     }
 
     isOpeningFileRef.current = true;
-
-    if (!window.go?.main?.App?.SelectHostsFile) {
-      setLoadError("The native Wails file dialog is not ready. Using the browser file picker instead.");
-      if (allowBrowserFallback) {
-        openBrowserFilePicker();
-      }
-      isOpeningFileRef.current = false;
-      return;
-    }
 
     setIsLoadingHostsFile(true);
     setLoadError("");
@@ -109,42 +183,12 @@ const MainLayout = () => {
     } catch (error) {
       const message = error?.message || String(error);
       setLoadError(message);
-
-      if (allowBrowserFallback) {
-        openBrowserFilePicker();
-      }
+      ToastQueue.negative(message, {
+        timeout: 5000,
+      });
     } finally {
       setIsLoadingHostsFile(false);
       isOpeningFileRef.current = false;
-    }
-  };
-
-  const handleBrowserFileChange = async (event) => {
-    const file = event.target.files?.[0];
-    event.target.value = "";
-
-    if (!file) {
-      return;
-    }
-
-    setIsLoadingHostsFile(true);
-    setLoadError("");
-
-    try {
-      const content = await file.text();
-      const parsed = parseHostsContent(content);
-
-      applyHostsSelection({
-        path: "",
-        fileName: file.name,
-        entries: parsed.entries,
-        cancelled: false,
-      });
-    } catch (error) {
-      const message = error?.message || String(error);
-      setLoadError(message);
-    } finally {
-      setIsLoadingHostsFile(false);
     }
   };
 
@@ -164,7 +208,7 @@ const MainLayout = () => {
     }
 
     hasRequestedInitialFile.current = true;
-    void openHostsFile({ allowBrowserFallback: false });
+    void openHostsFile();
   }, []);
 
   useEffect(() => {
@@ -195,35 +239,40 @@ const MainLayout = () => {
       const existing = prev.find((group) => group.name === groupName);
 
       if (existing) {
+        const existingEntryIDs = new Set(
+          (existing.children || []).map((child) => child.entryId)
+        );
+        const nextChildren = selectedItems
+          .filter((item) => !existingEntryIDs.has(item.id))
+          .map((item, index) =>
+            createEntryItem(item, `${existing.id}-${Date.now()}-${index}`)
+          );
+
         return prev.map((group) =>
           group.name === groupName
             ? {
                 ...group,
                 children: [
                   ...group.children,
-                  ...selectedItems.map((item) => ({
-                    id: `${item.id}-${Date.now()}`,
-                    name: item.hostnameLabel,
-                    icon: <File />,
-                  })),
+                  ...nextChildren,
                 ],
+                isActive: [...group.children, ...nextChildren].every(
+                  (child) => child.isActive
+                ),
+                hasPendingStateChange: false,
               }
             : group
         );
       }
 
+      const groupID = `group-${Date.now()}`;
+      const children = selectedItems.map((item, index) =>
+        createEntryItem(item, `${groupID}-entry-${item.line}-${index}`)
+      );
+
       return [
         ...prev,
-        {
-          id: `group-${Date.now()}`,
-          name: groupName || "New Group",
-          icon: <Folder />,
-          children: selectedItems.map((item) => ({
-            id: item.id,
-            name: item.hostnameLabel,
-            icon: <File />,
-          })),
-        },
+        createGroupItem(groupID, groupName, children),
       ];
     });
   };
@@ -235,6 +284,7 @@ const MainLayout = () => {
           ? {
               ...item,
               isActive,
+              hasPendingStateChange: true,
             }
           : item
       )
@@ -244,12 +294,24 @@ const MainLayout = () => {
   const buildSavePayload = (itemsToSave) =>
     itemsToSave.map((item) => ({
       id: item.id,
+      entryId: item.entryId || "",
+      line: item.line || 0,
       name: item.name,
+      ip: item.ip || "",
+      hostnames: item.hostnames ? [...item.hostnames] : [],
+      comment: item.comment || "",
       isActive: !!item.isActive,
+      hasPendingStateChange: !!item.hasPendingStateChange,
       children: item.children
         ? item.children.map((child) => ({
             id: child.id,
+            entryId: child.entryId || "",
+            line: child.line || 0,
             name: child.name,
+            ip: child.ip || "",
+            hostnames: child.hostnames ? [...child.hostnames] : [],
+            comment: child.comment || "",
+            isActive: !!child.isActive,
           }))
         : [],
     }));
@@ -262,16 +324,6 @@ const MainLayout = () => {
         height: "100vh",
       })}
     >
-      <input
-        ref={fileInputRef}
-        type="file"
-        accept=".txt,.conf,.hosts,*/*"
-        style={{ display: "none" }}
-        onChange={(event) => {
-          void handleBrowserFileChange(event);
-        }}
-      />
-
       <Header
         searchValue={searchValue}
         onSearchChange={setSearchValue}
@@ -293,13 +345,7 @@ const MainLayout = () => {
                 return prev;
               }
 
-              return [
-                ...prev,
-                {
-                  ...item,
-                  isActive: false,
-                },
-              ];
+              return [...prev, cloneSidebarItem(item)];
             });
           }}
         />
@@ -324,12 +370,26 @@ const MainLayout = () => {
         isOpen={isCommitDialogOpen}
         onClose={() => setIsCommitDialogOpen(false)}
         items={currentSelectedItems}
-        onConfirm={(selectedItems) => {
+        onConfirm={async (selectedItems) => {
+          if (!selectedFilePath) {
+            ToastQueue.negative("Open a hosts file from disk before committing changes.", {
+              timeout: 5000,
+            });
+            return;
+          }
+
           const payload = buildSavePayload(selectedItems);
-          console.log("Commit selected items:", payload);
-          ToastQueue.positive("Commit completed successfully.", {
-            timeout: 5000,
-          });
+          try {
+            const result = await SaveHostsSelection(selectedFilePath, payload);
+            applySavedHostsSelection(result);
+            ToastQueue.positive("Commit completed successfully.", {
+              timeout: 5000,
+            });
+          } catch (error) {
+            ToastQueue.negative(error?.message || String(error), {
+              timeout: 5000,
+            });
+          }
         }}
       />
 

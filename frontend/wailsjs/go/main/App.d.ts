@@ -4,4 +4,6 @@ import {main} from '../models';
 
 export function Greet(arg1:string):Promise<string>;
 
+export function SaveHostsSelection(arg1:string,arg2:Array<main.SaveHostsSelectionItem>):Promise<main.ParsedHostsSelection>;
+
 export function SelectHostsFile():Promise<main.ParsedHostsSelection>;
