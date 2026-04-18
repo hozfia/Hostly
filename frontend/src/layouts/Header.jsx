@@ -5,9 +5,13 @@ import RocketQuickActions from '@react-spectrum/s2/icons/RocketQuickActions';
 import Cancel from '@react-spectrum/s2/icons/Cancel';
 import Folder from '@react-spectrum/s2/icons/Folder';
 
-const Header = ({ onSavePress, onOpenHostsPress, onClearPress }) => {
-  const [search, setSearch] = React.useState("");
-
+const Header = ({
+  searchValue,
+  onSearchChange,
+  onSavePress,
+  onOpenHostsPress,
+  onClearPress,
+}) => {
   return (
     <div
       className={style({
@@ -34,8 +38,8 @@ const Header = ({ onSavePress, onOpenHostsPress, onClearPress }) => {
         <SearchField
           aria-label="Search"
           placeholder="Search..."
-          value={search}
-          onChange={setSearch}
+          value={searchValue}
+          onChange={onSearchChange}
           styles={style({
             width: 272
           })}

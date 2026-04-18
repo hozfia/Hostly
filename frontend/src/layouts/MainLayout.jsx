@@ -12,6 +12,7 @@ import File from "@react-spectrum/s2/icons/File";
 import { parseHostsContent } from "../utils/hostsParser";
 
 const MainLayout = () => {
+  const [searchValue, setSearchValue] = useState("");
   const [selectedKeys, setSelectedKeys] = useState(new Set());
   const [currentSelectedItems, setCurrentSelectedItems] = useState([]);
   const [isCommitDialogOpen, setIsCommitDialogOpen] = useState(false);
@@ -30,6 +31,37 @@ const MainLayout = () => {
     id: `entry-${entry.line}`,
     hostnameLabel: entry.hostnames.join(", "),
   }));
+  const normalizedSearchValue = searchValue.trim().toLowerCase();
+
+  const itemMatchesSearch = (item, searchTerm) => {
+    if (!searchTerm) {
+      return true;
+    }
+
+    if ((item.name || "").toLowerCase().includes(searchTerm)) {
+      return true;
+    }
+
+    return (item.children || []).some((child) => itemMatchesSearch(child, searchTerm));
+  };
+
+  const filteredTableRows = normalizedSearchValue
+    ? tableRows.filter((row) =>
+        [
+          row.hostnameLabel,
+          row.ip,
+          row.comment,
+          row.raw,
+          row.disabled ? "disabled" : "active",
+        ].some((value) =>
+          String(value || "").toLowerCase().includes(normalizedSearchValue)
+        )
+      )
+    : tableRows;
+
+  const filteredRootItems = normalizedSearchValue
+    ? items.filter((item) => itemMatchesSearch(item, normalizedSearchValue))
+    : items;
 
   const applyHostsSelection = (result) => {
     setHostEntries(result.entries || []);
@@ -135,6 +167,24 @@ const MainLayout = () => {
     void openHostsFile({ allowBrowserFallback: false });
   }, []);
 
+  useEffect(() => {
+    if (selectedKeys === "all") {
+      setSelectedKeys(new Set(filteredTableRows.map((row) => row.id)));
+      return;
+    }
+
+    setSelectedKeys((prev) => {
+      const visibleRowIds = new Set(filteredTableRows.map((row) => row.id));
+      const nextKeys = [...prev].filter((key) => visibleRowIds.has(key));
+
+      if (nextKeys.length === prev.size) {
+        return prev;
+      }
+
+      return new Set(nextKeys);
+    });
+  }, [filteredTableRows, selectedKeys]);
+
   const handleConfirmGrouping = ({ selected, groupName }) => {
     const selectedItems =
       selected.length === 1 && selected[0] === "ALL"
@@ -223,6 +273,8 @@ const MainLayout = () => {
       />
 
       <Header
+        searchValue={searchValue}
+        onSearchChange={setSearchValue}
         onSavePress={() => setIsCommitDialogOpen(true)}
         onOpenHostsPress={() => {
           void openHostsFile();
@@ -232,7 +284,7 @@ const MainLayout = () => {
 
       <div className={style({ display: "flex", flex: 1 })}>
         <Sidebar
-          items={items}
+          items={filteredRootItems}
           currentSelectedItems={currentSelectedItems}
           onToggleCurrentItemActive={handleToggleCurrentItemActive}
           onAddToCurrent={(item) => {
@@ -253,7 +305,7 @@ const MainLayout = () => {
         />
 
         <ContentTable
-          rows={tableRows}
+          rows={filteredTableRows}
           selected={selectedKeys}
           setSelected={setSelectedKeys}
           onConfirmGrouping={handleConfirmGrouping}
