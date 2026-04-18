@@ -1,7 +1,12 @@
 import React, { useEffect, useRef, useState } from "react";
 import { ToastContainer, ToastQueue } from "@react-spectrum/s2";
 import { style } from "@react-spectrum/s2/style" with { type: "macro" };
-import { SaveHostsSelection, SelectHostsFile } from "../../wailsjs/go/main/App";
+import {
+  LoadStoredGroups,
+  SaveHostsSelection,
+  SaveStoredGroups,
+  SelectHostsFile,
+} from "../../wailsjs/go/main/App";
 
 import Header from "./Header";
 import Sidebar from "./Sidebar";
@@ -23,6 +28,8 @@ const MainLayout = () => {
   const [items, setItems] = useState([]);
   const hasRequestedInitialFile = useRef(false);
   const isOpeningFileRef = useRef(false);
+  const itemsRef = useRef([]);
+  const currentSelectedItemsRef = useRef([]);
 
   const mapEntryToTableRow = (entry) => ({
     ...entry,
@@ -103,6 +110,93 @@ const MainLayout = () => {
     };
   };
 
+  const mapStoredEntryToSidebarItem = (entry) => ({
+    id: entry.id,
+    entryId: entry.entryId || `entry-${entry.line}`,
+    line: entry.line || 0,
+    name: entry.name,
+    icon: <File />,
+    ip: entry.ip || "",
+    hostnames: entry.hostnames ? [...entry.hostnames] : [],
+    comment: entry.comment || "",
+    raw: "",
+    disabled: !entry.isActive,
+    isActive: !!entry.isActive,
+    hasPendingStateChange: false,
+  });
+
+  const mapStoredGroupToSidebarItem = (group) => ({
+    id: group.id,
+    name: group.name || "New Group",
+    icon: <Folder />,
+    isActive: !!group.isActive,
+    hasPendingStateChange: false,
+    children: [...(group.children || [])]
+      .sort((left, right) => (left.sortOrder || 0) - (right.sortOrder || 0))
+      .map((child) => mapStoredEntryToSidebarItem(child)),
+  });
+
+  const buildRowsByLine = (entries) => {
+    const nextRows = (entries || []).map((entry) => mapEntryToTableRow(entry));
+    return new Map(nextRows.map((row) => [row.line, row]));
+  };
+
+  const mapStoredGroupsToSidebarItems = (storedGroups, nextRowsByLine) =>
+    [...(storedGroups || [])]
+      .sort((left, right) => (left.sortOrder || 0) - (right.sortOrder || 0))
+      .map((group) =>
+        syncItemWithEntries(mapStoredGroupToSidebarItem(group), nextRowsByLine)
+      );
+
+  const buildStoredGroupsPayload = (itemsToStore) =>
+    (itemsToStore || []).map((item, groupIndex) => ({
+      id: item.id,
+      name: item.name,
+      isActive: item.children?.length
+        ? item.children.every((child) => child.isActive)
+        : !!item.isActive,
+      sortOrder: groupIndex,
+      children: (item.children || []).map((child, childIndex) => ({
+        id: child.id,
+        entryId: child.entryId || "",
+        line: child.line || 0,
+        name: child.name,
+        ip: child.ip || "",
+        hostnames: child.hostnames ? [...child.hostnames] : [],
+        comment: child.comment || "",
+        isActive: !!child.isActive,
+        sortOrder: childIndex,
+      })),
+    }));
+
+  const persistStoredGroups = async (itemsToStore) => {
+    try {
+      await SaveStoredGroups(buildStoredGroupsPayload(itemsToStore));
+    } catch (error) {
+      ToastQueue.negative(
+        `Unable to save groups to SQLite: ${error?.message || String(error)}`,
+        {
+          timeout: 5000,
+        }
+      );
+    }
+  };
+
+  const loadStoredGroupItems = async (entries) => {
+    try {
+      const storedGroups = await LoadStoredGroups();
+      return mapStoredGroupsToSidebarItems(storedGroups, buildRowsByLine(entries));
+    } catch (error) {
+      ToastQueue.negative(
+        `Unable to load saved groups from SQLite: ${error?.message || String(error)}`,
+        {
+          timeout: 5000,
+        }
+      );
+      return [];
+    }
+  };
+
   const tableRows = hostEntries.map((entry) => mapEntryToTableRow(entry));
   const normalizedSearchValue = searchValue.trim().toLowerCase();
 
@@ -136,27 +230,32 @@ const MainLayout = () => {
     ? items.filter((item) => itemMatchesSearch(item, normalizedSearchValue))
     : items;
 
-  const applySavedHostsSelection = (result) => {
+  const applySavedHostsSelection = async (result) => {
     const nextEntries = result.entries || [];
-    const nextRows = nextEntries.map((entry) => mapEntryToTableRow(entry));
-    const nextRowsByLine = new Map(nextRows.map((row) => [row.line, row]));
+    const nextRowsByLine = buildRowsByLine(nextEntries);
+    const nextItems = itemsRef.current.map((item) =>
+      syncItemWithEntries(item, nextRowsByLine)
+    );
+    const nextCurrentSelectedItems = currentSelectedItemsRef.current.map((item) =>
+      syncItemWithEntries(item, nextRowsByLine)
+    );
 
     setHostEntries(nextEntries);
     setSelectedFilePath(result.path || "");
     setSelectedFileName(result.fileName || "");
-    setItems((prev) => prev.map((item) => syncItemWithEntries(item, nextRowsByLine)));
-    setCurrentSelectedItems((prev) =>
-      prev.map((item) => syncItemWithEntries(item, nextRowsByLine))
-    );
+    setItems(nextItems);
+    setCurrentSelectedItems(nextCurrentSelectedItems);
+
+    await persistStoredGroups(nextItems);
   };
 
-  const applyHostsSelection = (result) => {
+  const applyHostsSelection = (result, storedGroupItems = []) => {
     setHostEntries(result.entries || []);
     setSelectedFilePath(result.path || "");
     setSelectedFileName(result.fileName || "");
     setSelectedKeys(new Set());
     setCurrentSelectedItems([]);
-    setItems([]);
+    setItems(storedGroupItems);
     ToastQueue.positive(`Loaded ${result.fileName || "hosts file"} successfully.`, {
       timeout: 5000,
     });
@@ -179,7 +278,8 @@ const MainLayout = () => {
         return;
       }
 
-      applyHostsSelection(result);
+      const storedGroupItems = await loadStoredGroupItems(result.entries || []);
+      applyHostsSelection(result, storedGroupItems);
     } catch (error) {
       const message = error?.message || String(error);
       setLoadError(message);
@@ -212,6 +312,14 @@ const MainLayout = () => {
   }, []);
 
   useEffect(() => {
+    itemsRef.current = items;
+  }, [items]);
+
+  useEffect(() => {
+    currentSelectedItemsRef.current = currentSelectedItems;
+  }, [currentSelectedItems]);
+
+  useEffect(() => {
     if (selectedKeys === "all") {
       setSelectedKeys(new Set(filteredTableRows.map((row) => row.id)));
       return;
@@ -235,46 +343,44 @@ const MainLayout = () => {
         ? tableRows
         : tableRows.filter((row) => selected.includes(row.id));
 
-    setItems((prev) => {
-      const existing = prev.find((group) => group.name === groupName);
+    const previousItems = itemsRef.current;
+    const existing = previousItems.find((group) => group.name === groupName);
 
-      if (existing) {
-        const existingEntryIDs = new Set(
-          (existing.children || []).map((child) => child.entryId)
+    let nextItems = previousItems;
+
+    if (existing) {
+      const existingEntryIDs = new Set(
+        (existing.children || []).map((child) => child.entryId)
+      );
+      const nextChildren = selectedItems
+        .filter((item) => !existingEntryIDs.has(item.id))
+        .map((item, index) =>
+          createEntryItem(item, `${existing.id}-${Date.now()}-${index}`)
         );
-        const nextChildren = selectedItems
-          .filter((item) => !existingEntryIDs.has(item.id))
-          .map((item, index) =>
-            createEntryItem(item, `${existing.id}-${Date.now()}-${index}`)
-          );
 
-        return prev.map((group) =>
-          group.name === groupName
-            ? {
-                ...group,
-                children: [
-                  ...group.children,
-                  ...nextChildren,
-                ],
-                isActive: [...group.children, ...nextChildren].every(
-                  (child) => child.isActive
-                ),
-                hasPendingStateChange: false,
-              }
-            : group
-        );
-      }
-
+      nextItems = previousItems.map((group) =>
+        group.name === groupName
+          ? {
+              ...group,
+              children: [...group.children, ...nextChildren],
+              isActive: [...group.children, ...nextChildren].every(
+                (child) => child.isActive
+              ),
+              hasPendingStateChange: false,
+            }
+          : group
+      );
+    } else {
       const groupID = `group-${Date.now()}`;
       const children = selectedItems.map((item, index) =>
         createEntryItem(item, `${groupID}-entry-${item.line}-${index}`)
       );
 
-      return [
-        ...prev,
-        createGroupItem(groupID, groupName, children),
-      ];
-    });
+      nextItems = [...previousItems, createGroupItem(groupID, groupName, children)];
+    }
+
+    setItems(nextItems);
+    void persistStoredGroups(nextItems);
   };
 
   const handleToggleCurrentItemActive = (itemId, isActive) => {
@@ -381,7 +487,7 @@ const MainLayout = () => {
           const payload = buildSavePayload(selectedItems);
           try {
             const result = await SaveHostsSelection(selectedFilePath, payload);
-            applySavedHostsSelection(result);
+            await applySavedHostsSelection(result);
             ToastQueue.positive("Commit completed successfully.", {
               timeout: 5000,
             });

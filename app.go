@@ -9,11 +9,14 @@ import (
 	"strings"
 
 	"hostly/hosts"
+	"hostly/storage"
 )
 
 // App struct
 type App struct {
-	ctx context.Context
+	ctx              context.Context
+	store            *storage.Store
+	storageInitError error
 }
 
 type ParsedHostsSelection struct {
@@ -56,11 +59,66 @@ func NewApp() *App {
 // so we can call the runtime methods
 func (a *App) startup(ctx context.Context) {
 	a.ctx = ctx
+
+	store, err := storage.OpenDefault()
+	if err != nil {
+		a.storageInitError = err
+		fmt.Printf("storage init failed: %v\n", err)
+		return
+	}
+
+	a.store = store
+}
+
+func (a *App) shutdown(ctx context.Context) {
+	if a.store == nil {
+		return
+	}
+
+	if err := a.store.Close(); err != nil {
+		fmt.Printf("storage shutdown failed: %v\n", err)
+	}
 }
 
 // Greet returns a greeting for the given name
 func (a *App) Greet(name string) string {
 	return fmt.Sprintf("Hello %s, It's show time!", name)
+}
+
+func (a *App) LoadStoredGroups() ([]storage.Group, error) {
+	store, err := a.requireStore()
+	if err != nil {
+		return nil, err
+	}
+
+	return store.ListGroups(a.ctx)
+}
+
+func (a *App) SaveStoredGroups(groups []storage.Group) error {
+	store, err := a.requireStore()
+	if err != nil {
+		return err
+	}
+
+	return store.ReplaceGroups(a.ctx, groups)
+}
+
+func (a *App) DeleteStoredGroup(groupID string) error {
+	store, err := a.requireStore()
+	if err != nil {
+		return err
+	}
+
+	return store.DeleteGroup(a.ctx, groupID)
+}
+
+func (a *App) LastStoredHostsFile() (string, error) {
+	store, err := a.requireStore()
+	if err != nil {
+		return "", err
+	}
+
+	return store.LastHostsFile(a.ctx)
 }
 
 func (a *App) SelectHostsFile() (ParsedHostsSelection, error) {
@@ -72,6 +130,12 @@ func (a *App) SelectHostsFile() (ParsedHostsSelection, error) {
 	parsed, err := hosts.ParseHostsFile(selectedPath)
 	if err != nil {
 		return ParsedHostsSelection{}, fmt.Errorf("open default hosts file: %w", err)
+	}
+
+	if a.store != nil {
+		if err := a.store.SaveLastHostsFile(a.ctx, selectedPath); err != nil {
+			fmt.Printf("save last hosts file: %v\n", err)
+		}
 	}
 
 	return ParsedHostsSelection{
@@ -119,6 +183,12 @@ func (a *App) SaveHostsSelection(path string, items []SaveHostsSelectionItem) (P
 		return ParsedHostsSelection{}, fmt.Errorf("parse saved hosts file: %w", err)
 	}
 
+	if a.store != nil {
+		if err := a.store.SaveLastHostsFile(a.ctx, path); err != nil {
+			fmt.Printf("save last hosts file: %v\n", err)
+		}
+	}
+
 	return ParsedHostsSelection{
 		Path:      path,
 		FileName:  filepath.Base(path),
@@ -147,4 +217,16 @@ func firstExistingPath(paths ...string) string {
 	}
 
 	return ""
+}
+
+func (a *App) requireStore() (*storage.Store, error) {
+	if a.store != nil {
+		return a.store, nil
+	}
+
+	if a.storageInitError != nil {
+		return nil, fmt.Errorf("storage is unavailable: %w", a.storageInitError)
+	}
+
+	return nil, fmt.Errorf("storage is not initialized")
 }

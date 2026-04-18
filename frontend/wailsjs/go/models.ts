@@ -140,3 +140,74 @@ export namespace main {
 
 }
 
+export namespace storage {
+	
+	export class GroupEntry {
+	    id: string;
+	    entryId?: string;
+	    line?: number;
+	    name: string;
+	    ip?: string;
+	    hostnames?: string[];
+	    comment?: string;
+	    isActive: boolean;
+	    sortOrder: number;
+	
+	    static createFrom(source: any = {}) {
+	        return new GroupEntry(source);
+	    }
+	
+	    constructor(source: any = {}) {
+	        if ('string' === typeof source) source = JSON.parse(source);
+	        this.id = source["id"];
+	        this.entryId = source["entryId"];
+	        this.line = source["line"];
+	        this.name = source["name"];
+	        this.ip = source["ip"];
+	        this.hostnames = source["hostnames"];
+	        this.comment = source["comment"];
+	        this.isActive = source["isActive"];
+	        this.sortOrder = source["sortOrder"];
+	    }
+	}
+	export class Group {
+	    id: string;
+	    name: string;
+	    isActive: boolean;
+	    sortOrder: number;
+	    children?: GroupEntry[];
+	
+	    static createFrom(source: any = {}) {
+	        return new Group(source);
+	    }
+	
+	    constructor(source: any = {}) {
+	        if ('string' === typeof source) source = JSON.parse(source);
+	        this.id = source["id"];
+	        this.name = source["name"];
+	        this.isActive = source["isActive"];
+	        this.sortOrder = source["sortOrder"];
+	        this.children = this.convertValues(source["children"], GroupEntry);
+	    }
+	
+		convertValues(a: any, classs: any, asMap: boolean = false): any {
+		    if (!a) {
+		        return a;
+		    }
+		    if (a.slice && a.map) {
+		        return (a as any[]).map(elem => this.convertValues(elem, classs));
+		    } else if ("object" === typeof a) {
+		        if (asMap) {
+		            for (const key of Object.keys(a)) {
+		                a[key] = new classs(a[key]);
+		            }
+		            return a;
+		        }
+		        return new classs(a);
+		    }
+		    return a;
+		}
+	}
+
+}
+
