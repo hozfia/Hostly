@@ -9,14 +9,16 @@ permissions:
   contents: write
 
 jobs:
-  build:
+  # -------------------------
+  # 🐧 Linux (creates release)
+  # -------------------------
+  build-linux:
     runs-on: ubuntu-22.04
 
     steps:
       - uses: actions/checkout@v4
 
-      - name: Setup Go
-        uses: actions/setup-go@v5
+      - uses: actions/setup-go@v5
         with:
           go-version: '1.25'
 
@@ -31,9 +33,71 @@ jobs:
       - name: Build
         run: wails build
 
-      - name: Upload Release
+      - name: Upload Release (Linux)
         uses: softprops/action-gh-release@v1
         with:
           files: build/bin/*
+          name: Hostly ${{ github.ref_name }}
+          prerelease: ${{ contains(github.ref_name, 'beta') }}
+
+  # -------------------------
+  # 🍎 macOS
+  # -------------------------
+  build-macos:
+    runs-on: macos-latest
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-go@v5
+        with:
+          go-version: '1.25'
+
+      - name: Install Wails
+        run: go install github.com/wailsapp/wails/v2/cmd/wails@v2.12.0
+
+      - name: Build
+        run: wails build
+
+      - name: Package macOS
+        run: |
+          mkdir dist
+          ditto -c -k --keepParent build/bin/*.app dist/Hostly-macos.zip
+
+      - name: Upload macOS
+        uses: softprops/action-gh-release@v1
+        with:
+          files: dist/*
+          name: Hostly ${{ github.ref_name }}
+          prerelease: ${{ contains(github.ref_name, 'beta') }}
+
+  # -------------------------
+  # 🪟 Windows
+  # -------------------------
+  build-windows:
+    runs-on: windows-latest
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-go@v5
+        with:
+          go-version: '1.25'
+
+      - name: Install Wails
+        run: go install github.com/wailsapp/wails/v2/cmd/wails@v2.12.0
+
+      - name: Build
+        run: wails build
+
+      - name: Package Windows
+        run: |
+          mkdir dist
+          copy build\bin\*.exe dist\hostly-windows.exe
+
+      - name: Upload Windows
+        uses: softprops/action-gh-release@v1
+        with:
+          files: dist/*
           name: Hostly ${{ github.ref_name }}
           prerelease: ${{ contains(github.ref_name, 'beta') }}
