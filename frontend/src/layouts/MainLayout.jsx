@@ -2,11 +2,12 @@ import React, { useEffect, useRef, useState } from "react";
 import { ToastContainer, ToastQueue } from "@react-spectrum/s2";
 import { style } from "@react-spectrum/s2/style" with { type: "macro" };
 import {
+  ApplyHostsPlan,
   LoadStoredGroups,
-  SaveHostsSelection,
+  PreviewHostsSelection,
   SaveStoredGroups,
   SelectHostsFile,
-} from "../../wailsjs/go/main/App";
+} from "../lib/backend";
 
 import Header from "./Header";
 import Sidebar from "./Sidebar";
@@ -26,6 +27,7 @@ const MainLayout = () => {
   const [loadError, setLoadError] = useState("");
   const [isLoadingHostsFile, setIsLoadingHostsFile] = useState(false);
   const [items, setItems] = useState([]);
+  const [commitPreview, setCommitPreview] = useState(null);
   const hasRequestedInitialFile = useRef(false);
   const isOpeningFileRef = useRef(false);
   const itemsRef = useRef([]);
@@ -256,6 +258,7 @@ const MainLayout = () => {
     setSelectedKeys(new Set());
     setCurrentSelectedItems([]);
     setItems(storedGroupItems);
+    setCommitPreview(null);
     ToastQueue.positive(`Loaded ${result.fileName || "hosts file"} successfully.`, {
       timeout: 5000,
     });
@@ -294,6 +297,12 @@ const MainLayout = () => {
 
   const clearCurrentSelectedHosts = () => {
     setCurrentSelectedItems([]);
+    setCommitPreview(null);
+  };
+
+  const closeCommitDialog = () => {
+    setIsCommitDialogOpen(false);
+    setCommitPreview(null);
   };
 
   useEffect(() => {
@@ -416,6 +425,28 @@ const MainLayout = () => {
         : [],
     }));
 
+  const handlePreviewCommit = async () => {
+    if (!selectedFilePath) {
+      ToastQueue.negative("Open a hosts file from disk before committing changes.", {
+        timeout: 5000,
+      });
+      return;
+    }
+
+    try {
+      const preview = await PreviewHostsSelection(
+        selectedFilePath,
+        buildSavePayload(currentSelectedItems)
+      );
+      setCommitPreview(preview);
+      setIsCommitDialogOpen(true);
+    } catch (error) {
+      ToastQueue.negative(error?.message || String(error), {
+        timeout: 5000,
+      });
+    }
+  };
+
   return (
     <div
       className={style({
@@ -427,7 +458,9 @@ const MainLayout = () => {
       <Header
         searchValue={searchValue}
         onSearchChange={setSearchValue}
-        onSavePress={() => setIsCommitDialogOpen(true)}
+        onSavePress={() => {
+          void handlePreviewCommit();
+        }}
         onOpenHostsPress={() => {
           void openHostsFile();
         }}
@@ -468,19 +501,17 @@ const MainLayout = () => {
 
       <CommitDialog
         isOpen={isCommitDialogOpen}
-        onClose={() => setIsCommitDialogOpen(false)}
-        items={currentSelectedItems}
-        onConfirm={async (selectedItems) => {
-          if (!selectedFilePath) {
-            ToastQueue.negative("Open a hosts file from disk before committing changes.", {
-              timeout: 5000,
-            });
+        onClose={closeCommitDialog}
+        reviewItems={commitPreview?.review?.items || []}
+        plan={commitPreview?.plan || null}
+        description="Review the planned hosts file changes before continuing."
+        onConfirm={async () => {
+          if (!selectedFilePath || !commitPreview?.plan) {
             return;
           }
 
-          const payload = buildSavePayload(selectedItems);
           try {
-            const result = await SaveHostsSelection(selectedFilePath, payload);
+            const result = await ApplyHostsPlan(selectedFilePath, commitPreview.plan);
             await applySavedHostsSelection(result);
             ToastQueue.positive("Commit completed successfully.", {
               timeout: 5000,

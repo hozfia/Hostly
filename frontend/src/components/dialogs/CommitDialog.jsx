@@ -34,15 +34,16 @@ const itemStyles = style({
 const CommitDialog = ({
   isOpen,
   onClose,
-  items = [],
+  reviewItems = [],
+  plan = null,
   onConfirm,
   title = "Commit Changes",
-  description = "Review the current sidebar selection before continuing.",
+  description = "Review the planned hosts file changes before continuing.",
 }) => {
   const [isProgressOpen, setIsProgressOpen] = useState(false);
-
-  const selectedItems = items;
-  const selectionLabel = selectedItems.length === 1 ? "Selected item" : "Selected items";
+  const actionableCount =
+    (plan?.activate?.length || 0) + (plan?.deactivate?.length || 0);
+  const reviewLabel = reviewItems.length === 1 ? "Review item" : "Review items";
 
   useEffect(() => {
     if (!isOpen) {
@@ -61,7 +62,7 @@ const CommitDialog = ({
           onClose?.();
         }}
         onComplete={() => {
-          onConfirm?.(selectedItems);
+          onConfirm?.();
         }}
       />
     );
@@ -77,16 +78,28 @@ const CommitDialog = ({
 
             <Content>
               <Text>
-                {selectionLabel}: {selectedItems.length}
+                {reviewLabel}: {reviewItems.length}
+              </Text>
+
+              <Text
+                UNSAFE_style={{
+                  display: "block",
+                  marginTop: 8,
+                  color: "gray",
+                }}
+              >
+                Changes to apply: {actionableCount}
               </Text>
 
               <Divider size="S" styles={style({ marginY: 16 })} />
 
-              {selectedItems.length > 0 ? (
+              {reviewItems.length > 0 ? (
                 <div className={listStyles}>
-                  {selectedItems.map((item) => (
-                    <div key={item.id} className={itemStyles}>
-                      <Text>{item.name}</Text>
+                  {reviewItems.map((item, index) => (
+                    <div key={`${item.action}-${item.line}-${index}`} className={itemStyles}>
+                      <Text>
+                        {item.action} {item.line ? `Line ${item.line}` : ""}
+                      </Text>
                       <Text
                         UNSAFE_style={{
                           display: "block",
@@ -95,16 +108,33 @@ const CommitDialog = ({
                           marginTop: 4,
                         }}
                       >
-                        {item.children
-                          ? `${item.children.length} items in group`
-                          : "Single item"}{" "}
-                        - {item.isActive ? "Active" : "Inactive"}
+                        IP: {item.ip || "-"}
+                      </Text>
+                      <Text
+                        UNSAFE_style={{
+                          display: "block",
+                          fontSize: "0.9rem",
+                          color: "gray",
+                          marginTop: 4,
+                        }}
+                      >
+                        Hosts: {item.hosts?.length ? item.hosts.join(", ") : "-"}
+                      </Text>
+                      <Text
+                        UNSAFE_style={{
+                          display: "block",
+                          fontSize: "0.9rem",
+                          color: "gray",
+                          marginTop: 4,
+                        }}
+                      >
+                        Reason: {item.reason || "-"}
                       </Text>
                     </div>
                   ))}
                 </div>
               ) : (
-                <Text>No items are currently selected.</Text>
+                <Text>No planned changes are available.</Text>
               )}
             </Content>
 
@@ -120,7 +150,7 @@ const CommitDialog = ({
 
               <Button
                 variant="accent"
-                isDisabled={selectedItems.length === 0}
+                isDisabled={actionableCount === 0}
                 onPress={() => {
                   setIsProgressOpen(true);
                 }}

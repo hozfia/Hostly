@@ -70,6 +70,36 @@ func ApplyEntryStatesToFile(path string, entryStates map[int]bool) error {
 	return nil
 }
 
+// ApplyPlan updates targeted hosts entries based on a generated plan.
+func ApplyPlan(content string, plan Plan) (string, error) {
+	entryStates := make(map[int]bool, len(plan.Activate)+len(plan.Deactivate))
+
+	for _, line := range plan.Activate {
+		entryStates[line] = true
+	}
+
+	for _, line := range plan.Deactivate {
+		entryStates[line] = false
+	}
+
+	return ApplyEntryStates(content, entryStates)
+}
+
+// ApplyPlanToFile applies a generated plan directly to a hosts file on disk.
+func ApplyPlanToFile(path string, plan Plan) error {
+	entryStates := make(map[int]bool, len(plan.Activate)+len(plan.Deactivate))
+
+	for _, line := range plan.Activate {
+		entryStates[line] = true
+	}
+
+	for _, line := range plan.Deactivate {
+		entryStates[line] = false
+	}
+
+	return ApplyEntryStatesToFile(path, entryStates)
+}
+
 func formatHostEntry(entry HostEntry) string {
 	base := fmt.Sprintf("%s %s", entry.IP, strings.Join(entry.Hostnames, " "))
 	if entry.Comment != "" {

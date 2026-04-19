@@ -26,6 +26,11 @@ type ParsedHostsSelection struct {
 	Cancelled bool              `json:"cancelled"`
 }
 
+type HostsPlanPreview struct {
+	Plan   hosts.Plan          `json:"plan"`
+	Review hosts.ReviewSummary `json:"review"`
+}
+
 type SaveHostsSelectionEntry struct {
 	ID        string   `json:"id"`
 	EntryID   string   `json:"entryId"`
@@ -146,35 +151,31 @@ func (a *App) SelectHostsFile() (ParsedHostsSelection, error) {
 	}, nil
 }
 
-func (a *App) SaveHostsSelection(path string, items []SaveHostsSelectionItem) (ParsedHostsSelection, error) {
+func (a *App) PreviewHostsSelection(path string, items []SaveHostsSelectionItem) (HostsPlanPreview, error) {
+	if strings.TrimSpace(path) == "" {
+		return HostsPlanPreview{}, fmt.Errorf("no hosts file path available for planning")
+	}
+
+	parsed, err := hosts.ParseHostsFile(path)
+	if err != nil {
+		return HostsPlanPreview{}, fmt.Errorf("parse hosts file for planning: %w", err)
+	}
+
+	requests := buildRequestedStateChanges(parsed, items)
+	plan, review := hosts.BuildPlan(requests, parsed)
+
+	return HostsPlanPreview{
+		Plan:   plan,
+		Review: review,
+	}, nil
+}
+
+func (a *App) ApplyHostsPlan(path string, plan hosts.Plan) (ParsedHostsSelection, error) {
 	if strings.TrimSpace(path) == "" {
 		return ParsedHostsSelection{}, fmt.Errorf("no hosts file path available for saving")
 	}
 
-	entryStates := make(map[int]bool)
-	for _, item := range items {
-		if len(item.Children) > 0 {
-			for _, child := range item.Children {
-				if child.Line <= 0 {
-					continue
-				}
-
-				isActive := child.IsActive
-				if item.HasPendingStateChange {
-					isActive = item.IsActive
-				}
-
-				entryStates[child.Line] = isActive
-			}
-			continue
-		}
-
-		if item.Line > 0 {
-			entryStates[item.Line] = item.IsActive
-		}
-	}
-
-	if err := hosts.ApplyEntryStatesToFile(path, entryStates); err != nil {
+	if err := hosts.ApplyPlanToFile(path, plan); err != nil {
 		return ParsedHostsSelection{}, err
 	}
 
@@ -195,6 +196,15 @@ func (a *App) SaveHostsSelection(path string, items []SaveHostsSelectionItem) (P
 		Entries:   parsed.Entries,
 		Cancelled: false,
 	}, nil
+}
+
+func (a *App) SaveHostsSelection(path string, items []SaveHostsSelectionItem) (ParsedHostsSelection, error) {
+	preview, err := a.PreviewHostsSelection(path, items)
+	if err != nil {
+		return ParsedHostsSelection{}, err
+	}
+
+	return a.ApplyHostsPlan(path, preview.Plan)
 }
 
 func defaultHostsFilePath() string {
@@ -229,4 +239,66 @@ func (a *App) requireStore() (*storage.Store, error) {
 	}
 
 	return nil, fmt.Errorf("storage is not initialized")
+}
+
+func buildRequestedStateChanges(parsed hosts.HostsFile, items []SaveHostsSelectionItem) []hosts.RequestedStateChange {
+	entriesByLine := make(map[int]hosts.HostEntry, len(parsed.Entries))
+	for _, entry := range parsed.Entries {
+		entriesByLine[entry.Line] = entry
+	}
+
+	requests := make([]hosts.RequestedStateChange, 0)
+
+	appendRequest := func(line int, desiredActive bool, fallback hosts.HostEntry) {
+		target, ok := entriesByLine[line]
+		if !ok {
+			target = fallback
+		}
+		if target.Line == 0 {
+			target.Line = line
+		}
+
+		requests = append(requests, hosts.RequestedStateChange{
+			Target:   target,
+			Activate: desiredActive,
+		})
+	}
+
+	for _, item := range items {
+		if len(item.Children) > 0 {
+			for _, child := range item.Children {
+				desiredActive := child.IsActive
+				if item.HasPendingStateChange {
+					desiredActive = item.IsActive
+				}
+
+				appendRequest(
+					child.Line,
+					desiredActive,
+					hosts.HostEntry{
+						Line:      child.Line,
+						IP:        child.IP,
+						Hostnames: append([]string(nil), child.Hostnames...),
+						Comment:   child.Comment,
+						Disabled:  !desiredActive,
+					},
+				)
+			}
+			continue
+		}
+
+		appendRequest(
+			item.Line,
+			item.IsActive,
+			hosts.HostEntry{
+				Line:      item.Line,
+				IP:        item.IP,
+				Hostnames: append([]string(nil), item.Hostnames...),
+				Comment:   item.Comment,
+				Disabled:  !item.IsActive,
+			},
+		)
+	}
+
+	return requests
 }
