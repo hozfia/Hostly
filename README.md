@@ -1,19 +1,163 @@
-# README
+# 🖥️ Hostly - Desktop Hosts File Manager
 
-## About
+![Go](https://img.shields.io/badge/Go-1.20-blue)
+![React](https://img.shields.io/badge/React-Frontend-blue)
+![License](https://img.shields.io/badge/License-MIT-green)
 
-This is the official Wails React template.
+Hostly is a cross-platform desktop application built with **Go (Wails)** and **React** that makes managing your system's `hosts` file simple, safe, and efficient.
 
-You can configure the project by editing `wails.json`. More information about the project settings can be found
-here: https://wails.io/docs/reference/project-config
+It is designed for developers, DevOps engineers, and system administrators who frequently modify hosts entries and want to avoid conflicts and manual errors.
 
-## Live Development
+---
 
-To run in live development mode, run `wails dev` in the project directory. This will run a Vite development
-server that will provide very fast hot reload of your frontend changes. If you want to develop in a browser
-and have access to your Go methods, there is also a dev server that runs on http://localhost:34115. Connect
-to this in your browser, and you can call your Go code from devtools.
+## ✨ Features
 
-## Building
+* 🧠 Smart conflict detection
+  Automatically detects duplicate host entries with different IPs
 
-To build a redistributable, production mode package, use `wails build`.
+* 🔧 Auto-fix conflicts
+  Resolve conflicting entries with one click
+
+* ⚡ Fast & lightweight
+  Powered by Go backend with a modern React UI
+
+* 🖥️ Cross-platform
+  Works on Windows, macOS, and Linux
+
+* 📋 Easy hosts management
+  Add, edit, delete, and organize hosts entries بسهولة
+
+* 🔍 Clean UI
+  Built with React for a smooth user experience
+
+---
+
+## 🧱 Tech Stack
+
+* **Backend:** Go + Wails
+* **Frontend:** React
+* **Architecture:** Desktop app (no browser needed)
+
+---
+
+## 📸 Screenshots
+
+> Add your screenshots here
+
+```
+/screenshots/main.png
+/screenshots/conflict.png
+```
+
+---
+
+## ⚙️ Installation
+
+### Option 1: Download Release
+
+1. Go to the **Releases** page
+2. Download the binary for your OS
+3. Run the application
+
+---
+
+### Option 2: Run from Source
+
+#### Prerequisites
+
+* Go 1.20+
+* Node.js (v16+)
+* Wails CLI
+
+Install Wails:
+
+```bash
+go install github.com/wailsapp/wails/v2/cmd/wails@latest
+```
+
+#### Run the App
+
+```bash
+git clone https://github.com/your-username/hostly.git
+cd hostly
+wails dev
+```
+
+#### Build
+
+```bash
+wails build
+```
+
+---
+
+## 🔐 Permissions Note
+
+Modifying the `hosts` file requires **administrator/root privileges**.
+
+Make sure to run the app with elevated permissions:
+
+* Windows → Run as Administrator
+* macOS/Linux → Use sudo or grant proper permissions
+
+---
+
+## 🧠 How Conflict Detection Works
+
+Hostly scans your `hosts` file and:
+
+* Groups entries by hostname
+* Detects multiple IPs for the same host
+* Highlights conflicts in the UI
+* Suggests or applies fixes automatically
+
+---
+
+## 📂 Project Structure
+
+```
+.
+├── frontend/        # React app
+├── backend/         # Go logic
+├── wails.json       # Wails config
+└── main.go
+```
+
+---
+
+## 🤝 Contributing
+
+Contributions are welcome!
+
+1. Fork the repo
+2. Create a feature branch
+3. Commit your changes
+4. Open a Pull Request
+
+---
+
+## 🐛 Issues
+
+If you find a bug or have a feature request, please open an issue.
+
+---
+
+## 📜 License
+
+MIT License
+
+---
+
+## 💡 Future Improvements
+
+* Import/export hosts profiles
+* Environment-based switching (dev/staging/prod)
+* Backup & restore hosts file
+* DNS cache flush button
+* Integration with Docker / Kubernetes environments
+
+---
+
+## ⭐ Support
+
+If you like this project, give it a ⭐ on GitHub!
