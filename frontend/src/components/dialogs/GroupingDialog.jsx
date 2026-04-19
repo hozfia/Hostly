@@ -107,10 +107,14 @@ const GroupingDialog = ({
                   >
                     {existingGroups.length > 0 ? (
                       existingGroups.map((groupName) => (
-                        <MenuItem key={groupName}>{groupName}</MenuItem>
+                        <MenuItem id={groupName} key={groupName} textValue={groupName}>
+                          {groupName}
+                        </MenuItem>
                       ))
                     ) : (
-                      <MenuItem key="no-groups">No groups available</MenuItem>
+                      <MenuItem id="no-groups" key="no-groups" textValue="No groups available">
+                        No groups available
+                      </MenuItem>
                     )}
                   </Menu>
                 </Autocomplete>
