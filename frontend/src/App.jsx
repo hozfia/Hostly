@@ -5,6 +5,7 @@ import "@react-spectrum/s2/page.css";
 
 function App() {
   return (
+    // <Provider background="base" colorScheme="dark">
     <Provider background="base">
       <MainLayout />
     </Provider>
