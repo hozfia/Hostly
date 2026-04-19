@@ -19,23 +19,35 @@ jobs:
       - name: Checkout
         uses: actions/checkout@v4
 
-      # Setup Go
+      # Setup Go (with cache)
       - name: Setup Go
         uses: actions/setup-go@v5
         with:
           go-version: '1.25.6'
+          cache: true
 
       # Setup Node
       - name: Setup Node
         uses: actions/setup-node@v4
         with:
           node-version: 18
+          cache: 'npm'
 
-      # Install Wails
+      # Install frontend deps (IMPORTANT for Wails)
+      - name: Install frontend dependencies
+        run: |
+          cd frontend
+          npm install
+
+      # Download Go modules (speed up builds)
+      - name: Download Go modules
+        run: go mod download
+
+      # Install Wails (PINNED VERSION → no timeout)
       - name: Install Wails
-        run: go install github.com/wailsapp/wails/v2/cmd/wails@latest
+        run: go install github.com/wailsapp/wails/v2/cmd/wails@v2.12.0
 
-      # Linux dependencies (required by Wails)
+      # Linux dependencies
       - name: Install Linux dependencies
         if: matrix.os == 'ubuntu-latest'
         run: |
@@ -46,19 +58,21 @@ jobs:
       - name: Build
         run: wails build
 
-      # Rename binaries (clean naming per OS)
-      - name: Rename artifacts
+      # Package artifacts
+      - name: Package artifacts
         run: |
           mkdir dist
           if [ "${{ matrix.os }}" = "windows-latest" ]; then
             cp build/bin/*.exe dist/hostly-windows.exe
+            cd dist && zip hostly-windows.zip hostly-windows.exe
           elif [ "${{ matrix.os }}" = "macos-latest" ]; then
-            cp -r build/bin/*.app dist/Hostly-macos.app
+            ditto -c -k --keepParent build/bin/*.app dist/Hostly-macos.zip
           else
             cp build/bin/* dist/hostly-linux
+            cd dist && tar -czf hostly-linux.tar.gz hostly-linux
           fi
 
-      # Upload release
+      # Create GitHub Release
       - name: Create Release
         uses: softprops/action-gh-release@v1
         with:
