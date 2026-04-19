@@ -36,7 +36,7 @@ It is designed for developers, DevOps engineers, and system administrators who f
 
 * **Backend:** Go + Wails
 * **Frontend:** React
-* **Architecture:** Desktop app (no browser needed)
+* **Architecture:** Desktop app (no browser needed!)
 
 ---
 
