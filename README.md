@@ -4,6 +4,13 @@
 ![React](https://img.shields.io/badge/React-Frontend-blue)
 ![License](https://img.shields.io/badge/License-MIT-green)
 
+> 🚧 **Beta Release**
+> Hostly is currently in **beta**. Features are functional but may change, and you might encounter bugs or incomplete functionality.
+> 👉 **Everyone is welcome to contribute during this stage — feedback, issues, and pull requests are highly appreciated.**
+
+
+---
+
 Hostly is a cross-platform desktop application built with **Go (Wails)** and **React** that makes managing your system's `hosts` file simple, safe, and efficient.
 
 It is designed for developers, DevOps engineers, and system administrators who frequently modify hosts entries and want to avoid conflicts and manual errors.
@@ -23,9 +30,6 @@ It is designed for developers, DevOps engineers, and system administrators who f
 
 * 🖥️ Cross-platform
   Works on Windows, macOS, and Linux
-
-* 📋 Easy hosts management
-  Add, edit, delete, and organize hosts entries بسهولة
 
 * 🔍 Clean UI
   Built with React for a smooth user experience
