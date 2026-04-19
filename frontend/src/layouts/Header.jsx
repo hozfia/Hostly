@@ -38,8 +38,13 @@ const Header = ({
         <SearchField
           aria-label="Search"
           placeholder="Search..."
+          autoFocus
           value={searchValue}
           onChange={onSearchChange}
+          autoComplete="off"
+          autoCorrect="off"
+          autoCapitalize="none"
+          spellCheck={false}
           styles={style({
             width: 272
           })}
