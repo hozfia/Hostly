@@ -75,6 +75,14 @@ const MainLayout = () => {
     hasPendingStateChange: false,
   });
 
+  const itemContainsLine = (item, line) => {
+    if (item.children?.length) {
+      return item.children.some((child) => itemContainsLine(child, line));
+    }
+
+    return item.line === line;
+  };
+
   const syncItemWithEntries = (item, nextRowsByLine) => {
     if (item.children?.length) {
       const nextChildren = item.children.map((child) =>
@@ -400,6 +408,29 @@ const MainLayout = () => {
     );
   };
 
+  const handleAddSelectedRowsToCurrent = (rowsToAdd) => {
+    if (!rowsToAdd?.length) {
+      return;
+    }
+
+    setCurrentSelectedItems((prev) => {
+      const nextItems = [...prev];
+
+      rowsToAdd.forEach((row) => {
+        const alreadyAdded = nextItems.some((item) => itemContainsLine(item, row.line));
+        if (alreadyAdded) {
+          return;
+        }
+
+        nextItems.push(createEntryItem(row));
+      });
+
+      return nextItems;
+    });
+
+    setSelectedKeys(new Set());
+  };
+
   const buildSavePayload = (itemsToSave) =>
     itemsToSave.map((item) => ({
       id: item.id,
@@ -488,6 +519,7 @@ const MainLayout = () => {
           selected={selectedKeys}
           setSelected={setSelectedKeys}
           onConfirmGrouping={handleConfirmGrouping}
+          onAddSelectedToCurrent={handleAddSelectedRowsToCurrent}
           existingGroups={items.map((item) => item.name)}
           filePath={selectedFilePath}
           fileName={selectedFileName}

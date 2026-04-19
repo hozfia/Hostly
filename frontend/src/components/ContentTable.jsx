@@ -11,8 +11,8 @@ import {
   Text,
 } from "@react-spectrum/s2";
 
+import CheckmarkCircle from "@react-spectrum/s2/icons/CheckmarkCircle";
 import Tag from "@react-spectrum/s2/icons/Tag";
-import Folder from "@react-spectrum/s2/icons/Folder";
 
 import { style } from "@react-spectrum/s2/style" with { type: "macro" };
 
@@ -23,6 +23,7 @@ const ContentTable = ({
   selected,
   setSelected,
   onConfirmGrouping,
+  onAddSelectedToCurrent,
   existingGroups,
   filePath,
   fileName,
@@ -68,6 +69,19 @@ const ContentTable = ({
             onSelectionChange={setSelected}
             renderActionBar={() => (
               <ActionBar>
+                <ActionButton
+                  onPress={() => {
+                    const selectedRows =
+                      selected === "all"
+                        ? rows
+                        : rows.filter((row) => selected?.has?.(row.id));
+
+                    onAddSelectedToCurrent?.(selectedRows);
+                  }}
+                >
+                  <CheckmarkCircle />
+                  <Text>Activate/Deactivate</Text>
+                </ActionButton>
                 <ActionButton onPress={() => setGroupingOpen(true)}>
                   <Tag />
                   <Text>Grouping</Text>
