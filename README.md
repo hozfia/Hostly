@@ -42,12 +42,9 @@ It is designed for developers, DevOps engineers, and system administrators who f
 
 ## 📸 Screenshots
 
-> Add your screenshots here
+![Main UI](./screenshots/main.png)
 
-```
-/screenshots/main.png
-/screenshots/conflict.png
-```
+![Conflict Detection](./screenshots/conflict.png)
 
 ---
 
