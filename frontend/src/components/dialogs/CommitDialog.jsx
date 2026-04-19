@@ -26,9 +26,65 @@ const itemStyles = style({
   paddingY: 8,
   borderWidth: 1,
   borderStyle: "solid",
-  borderColor: "gray-300",
   borderRadius: "lg",
-  backgroundColor: "gray-25",
+});
+
+const itemToneStyles = style({
+  borderColor: {
+    default: "gray-300",
+    tone: {
+      activate: "positive-700",
+      deactivate: "notice-700",
+      ignore: "gray-400",
+      reject: "negative-700",
+    },
+  },
+  backgroundColor: {
+    default: "gray-25",
+    tone: {
+      activate: "positive-subtle",
+      deactivate: "notice-subtle",
+      ignore: "gray-100",
+      reject: "negative-subtle",
+    },
+  },
+});
+
+const actionLabelStyles = style({
+  display: "inline-flex",
+  alignItems: "center",
+  borderRadius: "full",
+  paddingX: 8,
+  paddingY: 2,
+  borderWidth: 1,
+  borderStyle: "solid",
+  borderColor: {
+    default: "gray-300",
+    tone: {
+      activate: "positive-700",
+      deactivate: "notice-700",
+      ignore: "gray-400",
+      reject: "negative-700",
+    },
+  },
+  backgroundColor: {
+    default: "gray-100",
+    tone: {
+      activate: "positive-subtle",
+      deactivate: "notice-subtle",
+      ignore: "gray-200",
+      reject: "negative-subtle",
+    },
+  },
+  color: {
+    default: "neutral",
+    tone: {
+      activate: "positive-700",
+      deactivate: "notice-700",
+      ignore: "neutral",
+      reject: "negative-700",
+    },
+  },
 });
 
 const CommitDialog = ({
@@ -44,6 +100,21 @@ const CommitDialog = ({
   const actionableCount =
     (plan?.activate?.length || 0) + (plan?.deactivate?.length || 0);
   const reviewLabel = reviewItems.length === 1 ? "Review item" : "Review items";
+
+  const toneForAction = (action) => {
+    switch (action) {
+      case "ACTIVATE":
+        return "activate";
+      case "DEACTIVATE":
+        return "deactivate";
+      case "IGNORE":
+        return "ignore";
+      case "REJECT":
+        return "reject";
+      default:
+        return undefined;
+    }
+  };
 
   useEffect(() => {
     if (!isOpen) {
@@ -96,10 +167,26 @@ const CommitDialog = ({
               {reviewItems.length > 0 ? (
                 <div className={listStyles}>
                   {reviewItems.map((item, index) => (
-                    <div key={`${item.action}-${item.line}-${index}`} className={itemStyles}>
-                      <Text>
-                        {item.action} {item.line ? `Line ${item.line}` : ""}
-                      </Text>
+                    <div
+                      key={`${item.action}-${item.line}-${index}`}
+                      className={`${itemStyles} ${itemToneStyles({
+                        tone: toneForAction(item.action),
+                      })}`}
+                    >
+                      <div className={style({ display: "flex", alignItems: "center", gap: 8 })}>
+                        <span
+                          className={actionLabelStyles({
+                            tone: toneForAction(item.action),
+                          })}
+                          style={{
+                            fontSize: "0.85rem",
+                            fontWeight: 700,
+                          }}
+                        >
+                          {item.action}
+                        </span>
+                        <Text>{item.line ? `Line ${item.line}` : "No line"}</Text>
+                      </div>
                       <Text
                         UNSAFE_style={{
                           display: "block",
