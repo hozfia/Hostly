@@ -76,6 +76,10 @@ const GroupingDialog = ({
               label="Group Name"
               value={groupName}
               isDisabled={hasExistingGroup}
+              autoComplete="off"
+              autoCorrect="off"
+              autoCapitalize="off"
+              spellCheck={false}
               onChange={(value) => {
                 setGroupName(value);
                 if (value.trim()) {

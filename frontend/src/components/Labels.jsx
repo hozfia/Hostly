@@ -191,6 +191,10 @@ const Labels = ({ items, onAddToCurrent }) => {
                 onChange={setRenameValue}
                 width="100%"
                 autoFocus
+                autoComplete="off"
+                autoCorrect="off"
+                autoCapitalize="off"
+                spellCheck={false}
               />
             </Content>
             <ButtonGroup>

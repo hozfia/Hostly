@@ -151,6 +151,10 @@ const AddEntryDialog = ({ isOpen, onClose, onAdd }) => {
                 onChange={set("ip")}
                 isRequired
                 width="100%"
+                autoComplete="off"
+                autoCorrect="off"
+                autoCapitalize="off"
+                spellCheck={false}
               />
               <TextField
                 label="Hostnames"
@@ -160,6 +164,10 @@ const AddEntryDialog = ({ isOpen, onClose, onAdd }) => {
                 onChange={set("hostnamesRaw")}
                 isRequired
                 width="100%"
+                autoComplete="off"
+                autoCorrect="off"
+                autoCapitalize="off"
+                spellCheck={false}
               />
               <TextField
                 label="Comment"
@@ -168,6 +176,10 @@ const AddEntryDialog = ({ isOpen, onClose, onAdd }) => {
                 value={fields.comment}
                 onChange={set("comment")}
                 width="100%"
+                autoComplete="off"
+                autoCorrect="off"
+                autoCapitalize="off"
+                spellCheck={false}
               />
             </div>
           ) : (
@@ -179,6 +191,10 @@ const AddEntryDialog = ({ isOpen, onClose, onAdd }) => {
                 value={fields.bulkText}
                 onChange={set("bulkText")}
                 width="100%"
+                autoComplete="off"
+                autoCorrect="off"
+                autoCapitalize="off"
+                spellCheck={false}
               />
               {fields.bulkText.trim() && (
                 <Text

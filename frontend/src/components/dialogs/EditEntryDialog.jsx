@@ -70,6 +70,10 @@ const EditEntryDialog = ({ isOpen, onClose, entry, onEdit }) => {
               isRequired
               width="100%"
               autoFocus
+              autoComplete="off"
+              autoCorrect="off"
+              autoCapitalize="off"
+              spellCheck={false}
             />
             <TextField
               label="Hostnames"
@@ -78,6 +82,10 @@ const EditEntryDialog = ({ isOpen, onClose, entry, onEdit }) => {
               onChange={setHostnamesRaw}
               isRequired
               width="100%"
+              autoComplete="off"
+              autoCorrect="off"
+              autoCapitalize="off"
+              spellCheck={false}
             />
             <TextField
               label="Comment"
@@ -85,6 +93,10 @@ const EditEntryDialog = ({ isOpen, onClose, entry, onEdit }) => {
               value={comment}
               onChange={setComment}
               width="100%"
+              autoComplete="off"
+              autoCorrect="off"
+              autoCapitalize="off"
+              spellCheck={false}
             />
           </div>
 
