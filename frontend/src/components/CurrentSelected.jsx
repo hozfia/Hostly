@@ -1,5 +1,6 @@
 import React from "react";
-import { ListView, ListViewItem, Text, Switch } from "@react-spectrum/s2";
+import { Content, Heading, IllustratedMessage, ListView, ListViewItem, Switch, Text } from "@react-spectrum/s2";
+import Cursor from "@react-spectrum/s2/illustrations/linear/Cursor";
 import { style } from "@react-spectrum/s2/style" with { type: "macro" };
 
 const CurrentSelected = ({ items = [], onToggleItemActive }) => {
@@ -12,6 +13,15 @@ const CurrentSelected = ({ items = [], onToggleItemActive }) => {
         width: "100%",
         height: 320,
       })}
+      renderEmptyState={() => (
+        <IllustratedMessage>
+          <Cursor />
+          <Heading>Nothing selected yet</Heading>
+          <Content>
+            Pick entries from the table or add a group from the sidebar to start managing your hosts.
+          </Content>
+        </IllustratedMessage>
+      )}
     >
       {(item) => (
         <ListViewItem id={item.id} textValue={item.name}>

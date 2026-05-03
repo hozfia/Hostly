@@ -8,13 +8,20 @@ import {
   Cell,
   ActionBar,
   ActionButton,
+  Content,
+  Heading,
+  IllustratedMessage,
   Text,
 } from "@react-spectrum/s2";
 
 import CheckmarkCircle from "@react-spectrum/s2/icons/CheckmarkCircle";
 import Tag from "@react-spectrum/s2/icons/Tag";
+import Document from "@react-spectrum/s2/illustrations/linear/Document";
+import FolderOpen from "@react-spectrum/s2/illustrations/linear/FolderOpen";
+import NoSearchResults from "@react-spectrum/s2/illustrations/linear/NoSearchResults";
 
 import { style } from "@react-spectrum/s2/style" with { type: "macro" };
+import { useSelector } from "react-redux";
 
 import GroupingDialog from "./dialogs/GroupingDialog";
 
@@ -32,7 +39,7 @@ const ContentTable = ({
   onOpenHostsFile,
 }) => {
   const [groupingOpen, setGroupingOpen] = useState(false);
-  const hasRows = rows.length > 0;
+  const searchValue = useSelector((state) => state.ui.searchValue);
 
   return (
     <>
@@ -96,17 +103,47 @@ const ContentTable = ({
               <Column>Comment</Column>
             </TableHeader>
 
-            <TableBody>
-              {hasRows
-                ? rows.map((row) => (
-                    <Row id={row.id} key={row.id}>
-                      <Cell>{row.hostnameLabel}</Cell>
-                      <Cell>{row.ip}</Cell>
-                      <Cell>{row.disabled ? "Disabled" : "Active"}</Cell>
-                      <Cell>{row.comment || "-"}</Cell>
-                    </Row>
-                  ))
-                : null}
+            <TableBody
+              items={rows}
+              renderEmptyState={() => {
+                if (isLoading) return null;
+                if (!filePath) {
+                  return (
+                    <IllustratedMessage>
+                      <FolderOpen />
+                      <Heading>No hosts file open</Heading>
+                      <Content>Open a hosts file to view and manage its entries.</Content>
+                    </IllustratedMessage>
+                  );
+                }
+                if (searchValue.trim().length > 0) {
+                  return (
+                    <IllustratedMessage>
+                      <NoSearchResults />
+                      <Heading>No matches</Heading>
+                      <Content>
+                        No entries match "{searchValue.trim()}". Try a different search term.
+                      </Content>
+                    </IllustratedMessage>
+                  );
+                }
+                return (
+                  <IllustratedMessage>
+                    <Document />
+                    <Heading>File is empty</Heading>
+                    <Content>This hosts file has no entries yet.</Content>
+                  </IllustratedMessage>
+                );
+              }}
+            >
+              {(row) => (
+                <Row id={row.id}>
+                  <Cell>{row.hostnameLabel}</Cell>
+                  <Cell>{row.ip}</Cell>
+                  <Cell>{row.disabled ? "Disabled" : "Active"}</Cell>
+                  <Cell>{row.comment || "-"}</Cell>
+                </Row>
+              )}
             </TableBody>
           </TableView>
         </div>
