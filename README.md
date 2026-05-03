@@ -1,96 +1,164 @@
-# Hostly
+# 🖥️ Hostly - Desktop Hosts File Manager
 
-**A desktop app for managing your system hosts file — without the manual editing.**
+![Go](https://img.shields.io/badge/Go-1.20-blue)
+![React](https://img.shields.io/badge/React-Frontend-blue)
+![License](https://img.shields.io/badge/License-MIT-green)
 
-Hostly gives developers and sysadmins a clean interface to activate, deactivate, edit, and organize hosts entries. It detects conflicts automatically, previews every change before writing to disk, and requires elevated privileges only at the moment it applies changes.
+> 🚧 **Beta Release**
+> Hostly is currently in **beta**. Features are functional but may change, and you might encounter bugs or incomplete functionality.
+> 👉 **Everyone is welcome to contribute during this stage — feedback, issues, and pull requests are highly appreciated.**
 
-> **Beta** — functional and in active development. Feedback and contributions welcome.
-
----
-
-## Features
-
-**Plan before you write**
-Every change goes through a review step. Hostly shows you exactly what will be activated, deactivated, or added before anything touches the file.
-
-**Conflict detection**
-If two entries map different IPs to the same hostname, Hostly flags the conflict and proposes a fix — deactivating the conflicting line automatically.
-
-**Edit entries in place**
-Select any row, click Edit, change the IP or hostnames, and commit. The original line is rewritten — no duplicate lines left behind.
-
-**Groups**
-Bundle related entries together and toggle them as a unit. Useful for switching between environments (local dev, staging, VPN).
-
-**Add entries**
-Add single entries with validated fields, or paste a block of raw hosts syntax for bulk import.
-
-**Search**
-Filter entries and groups live as you type.
-
-**Cross-platform**
-Runs on macOS, Linux, and Windows.
 
 ---
 
-## Download
+Hostly is a cross-platform desktop application built with **Go (Wails)** and **React** that makes managing your system's `hosts` file simple, safe, and efficient.
 
-Grab the latest binary from the [Releases](../../releases) page — no dependencies required.
-
-| Platform | File |
-|----------|------|
-| macOS | `hostly-darwin.zip` |
-| Linux | `hostly-linux.zip` |
-| Windows | `hostly-windows.zip` |
-
-> Applying changes to the hosts file requires administrator/root privileges. Hostly will prompt for elevation at commit time — not before.
+It is designed for developers, DevOps engineers, and system administrators who frequently modify hosts entries and want to avoid conflicts and manual errors.
 
 ---
 
-## Build from source
+## ✨ Features
 
-**Prerequisites:** Go 1.21+, Node.js 18+, Wails CLI
+* 🧠 Smart conflict detection
+  Automatically detects duplicate host entries with different IPs
+
+* 🔧 Auto-fix conflicts
+  Resolve conflicting entries with one click
+
+* ⚡ Fast & lightweight
+  Powered by Go backend with a modern React UI
+
+* 🖥️ Cross-platform
+  Works on Windows, macOS, and Linux
+
+* 🔍 Clean UI
+  Built with React for a smooth user experience
+
+---
+
+## 🧱 Tech Stack
+
+* **Backend:** Go + Wails
+* **Frontend:** React
+* **Architecture:** Desktop app (no browser needed!)
+
+---
+
+## 📸 Screenshots
+
+![Main UI](./screenshots/main.png)
+
+![Conflict Detection](./screenshots/conflict.png)
+
+---
+
+## ⚙️ Installation
+
+### Option 1: Download Release
+
+1. Go to the **Releases** page
+2. Download the binary for your OS
+3. Run the application
+
+---
+
+### Option 2: Run from Source
+
+#### Prerequisites
+
+* Go 1.20+
+* Node.js (v16+)
+* Wails CLI
+
+Install Wails:
 
 ```bash
-go install github.com/wailsapp/wails/v2/cmd/wails@v2.12.0
+go install github.com/wailsapp/wails/v2/cmd/wails@latest
+```
 
-git clone https://github.com/hozfia/Hostly.git
-cd Hostly
-wails dev       # dev mode with hot reload
-wails build     # production binary
+#### Run the App
+
+```bash
+git clone https://github.com/your-username/hostly.git
+cd hostly
+wails dev
+```
+
+#### Build
+
+```bash
+wails build
 ```
 
 ---
 
-## How it works
+## 🔐 Permissions Note
 
-1. **Load** — Hostly reads your system hosts file and parses every entry.
-2. **Select** — Pick entries from the table or add them by group. Toggle active/inactive per item.
-3. **Preview** — Generate a diff-like plan showing each line's fate: `ACTIVATE`, `DEACTIVATE`, `UPDATE`, `IGNORE`, or `REJECT`.
-4. **Commit** — Confirm, and Hostly rewrites only the affected lines.
+Modifying the `hosts` file requires **administrator/root privileges**.
 
-Groups and selections are persisted locally (SQLite) so your workspace survives restarts.
+Make sure to run the app with elevated permissions:
 
----
-
-## Tech stack
-
-| Layer | Technology |
-|-------|-----------|
-| Backend | Go + Wails v2 |
-| Frontend | React + Vite |
-| UI components | Adobe React Spectrum S2 |
-| Storage | SQLite (`modernc.org/sqlite`) |
-| IPC | Wails bindings (no REST API) |
+* Windows → Run as Administrator
+* macOS/Linux → Use sudo or grant proper permissions
 
 ---
 
-## Contributing
+## 🧠 How Conflict Detection Works
 
-Issues and pull requests are welcome. For significant changes, open an issue first to discuss the approach.
+Hostly scans your `hosts` file and:
+
+* Groups entries by hostname
+* Detects multiple IPs for the same host
+* Highlights conflicts in the UI
+* Suggests or applies fixes automatically
 
 ---
 
-## License
+## 📂 Project Structure
 
-MIT
+```
+.
+├── frontend/        # React app
+├── backend/         # Go logic
+├── wails.json       # Wails config
+└── main.go
+```
+
+---
+
+## 🤝 Contributing
+
+Contributions are welcome!
+
+1. Fork the repo
+2. Create a feature branch
+3. Commit your changes
+4. Open a Pull Request
+
+---
+
+## 🐛 Issues
+
+If you find a bug or have a feature request, please open an issue.
+
+---
+
+## 📜 License
+
+MIT License
+
+---
+
+## 💡 Future Improvements
+
+* Import/export hosts profiles
+* Environment-based switching (dev/staging/prod)
+* Backup & restore hosts file
+* DNS cache flush button
+* Integration with Docker / Kubernetes environments
+
+---
+
+## ⭐ Support
+
+If you like this project, give it a ⭐ on GitHub!
