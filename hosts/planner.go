@@ -16,10 +16,11 @@ const (
 
 // Plan describes the final line-level changes to apply to a hosts file.
 type Plan struct {
-	Activate   []int    `json:"activate"`
-	Deactivate []int    `json:"deactivate"`
-	Ignore     []int    `json:"ignore"`
-	Reject     []string `json:"reject"`
+	Activate      []int       `json:"activate"`
+	Deactivate    []int       `json:"deactivate"`
+	Ignore        []int       `json:"ignore"`
+	Reject        []string    `json:"reject"`
+	AppendEntries []HostEntry `json:"appendEntries"`
 }
 
 // ReviewItem is a structured review row for the UI.
@@ -143,8 +144,19 @@ func BuildPlan(requests []RequestedStateChange, hostsFile HostsFile) (Plan, Revi
 	requestOutcomesByLine := make(map[int]ReviewItem, len(dedupedRequests))
 	rejectedRequestLines := make(map[int]struct{}, len(dedupedRequests))
 	rejectItems := make([]ReviewItem, 0)
+	appendEntries := make([]HostEntry, 0)
+	appendReviewItems := make([]ReviewItem, 0)
 
 	for _, request := range dedupedRequests {
+		// Entries with no line number are new entries to be appended to the file.
+		if request.Target.Line == 0 {
+			if request.Activate {
+				appendEntries = append(appendEntries, cloneHostEntry(request.Target))
+				appendReviewItems = append(appendReviewItems, reviewItem(actionActivate, request.Target, "new entry"))
+			}
+			continue
+		}
+
 		if request.Target.Line > 0 {
 			requestOrder = append(requestOrder, request.Target.Line)
 			requestsByLine[request.Target.Line] = cloneRequestedStateChange(request)
@@ -262,6 +274,9 @@ func BuildPlan(requests []RequestedStateChange, hostsFile HostsFile) (Plan, Revi
 		review.Items = append(review.Items, item)
 	}
 
+	finalPlan.AppendEntries = appendEntries
+	review.Items = append(review.Items, appendReviewItems...)
+
 	sort.Ints(finalPlan.Ignore)
 
 	return finalPlan, review
@@ -269,10 +284,11 @@ func BuildPlan(requests []RequestedStateChange, hostsFile HostsFile) (Plan, Revi
 
 func newPlan() Plan {
 	return Plan{
-		Activate:   []int{},
-		Deactivate: []int{},
-		Ignore:     []int{},
-		Reject:     []string{},
+		Activate:      []int{},
+		Deactivate:    []int{},
+		Ignore:        []int{},
+		Reject:        []string{},
+		AppendEntries: []HostEntry{},
 	}
 }
 

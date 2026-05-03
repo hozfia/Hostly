@@ -7,8 +7,9 @@ import Header from "./Header";
 import Sidebar from "./Sidebar";
 import ContentTable from "../components/ContentTable";
 import CommitDialog from "../components/dialogs/CommitDialog";
+import AddEntryDialog from "../components/dialogs/AddEntryDialog";
 
-import { setSearchValue } from "../store/uiSlice";
+import { setSearchValue, openAddEntryDialog, closeAddEntryDialog } from "../store/uiSlice";
 import { setItems } from "../store/groupsSlice";
 import {
   addToCurrentSelected,
@@ -44,6 +45,7 @@ const MainLayout = () => {
   const currentSelectedItems = useSelector((state) => state.selection.currentSelectedItems);
   const isCommitDialogOpen = useSelector((state) => state.selection.isCommitDialogOpen);
   const commitPreview = useSelector((state) => state.selection.commitPreview);
+  const isAddEntryDialogOpen = useSelector((state) => state.ui.isAddEntryDialogOpen);
 
   const hasRequestedInitialFile = useRef(false);
   const isOpeningFileRef = useRef(false);
@@ -167,6 +169,7 @@ const MainLayout = () => {
         onSavePress={() => dispatch(previewCommitThunk())}
         onOpenHostsPress={() => void openHostsFile()}
         onClearPress={() => dispatch(clearCurrentSelected())}
+        onAddEntryPress={() => dispatch(openAddEntryDialog())}
       />
 
       <div className={style({ display: "flex", flex: 1 })}>
@@ -206,6 +209,27 @@ const MainLayout = () => {
         plan={commitPreview?.plan || null}
         description="Review the planned hosts file changes before continuing."
         onConfirm={() => dispatch(applyCommitThunk())}
+      />
+
+      <AddEntryDialog
+        isOpen={isAddEntryDialogOpen}
+        onClose={() => dispatch(closeAddEntryDialog())}
+        onAdd={(entries) => {
+          const newItems = entries.map((entry, index) => ({
+            id: `new-entry-${Date.now()}-${index}`,
+            entryId: "",
+            line: 0,
+            name: entry.hostnames.join(", "),
+            ip: entry.ip,
+            hostnames: [...entry.hostnames],
+            comment: entry.comment || "",
+            raw: "",
+            disabled: false,
+            isActive: true,
+            hasPendingStateChange: false,
+          }));
+          dispatch(addToCurrentSelected(newItems));
+        }}
       />
 
       <ToastContainer />

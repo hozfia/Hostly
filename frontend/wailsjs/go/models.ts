@@ -27,6 +27,7 @@ export namespace hosts {
 	    deactivate: number[];
 	    ignore: number[];
 	    reject: string[];
+	    appendEntries: HostEntry[];
 	
 	    static createFrom(source: any = {}) {
 	        return new Plan(source);
@@ -38,7 +39,26 @@ export namespace hosts {
 	        this.deactivate = source["deactivate"];
 	        this.ignore = source["ignore"];
 	        this.reject = source["reject"];
+	        this.appendEntries = this.convertValues(source["appendEntries"], HostEntry);
 	    }
+	
+		convertValues(a: any, classs: any, asMap: boolean = false): any {
+		    if (!a) {
+		        return a;
+		    }
+		    if (a.slice && a.map) {
+		        return (a as any[]).map(elem => this.convertValues(elem, classs));
+		    } else if ("object" === typeof a) {
+		        if (asMap) {
+		            for (const key of Object.keys(a)) {
+		                a[key] = new classs(a[key]);
+		            }
+		            return a;
+		        }
+		        return new classs(a);
+		    }
+		    return a;
+		}
 	}
 	export class ReviewItem {
 	    action: string;

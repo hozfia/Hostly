@@ -98,7 +98,9 @@ const CommitDialog = ({
 }) => {
   const [isProgressOpen, setIsProgressOpen] = useState(false);
   const actionableCount =
-    (plan?.activate?.length || 0) + (plan?.deactivate?.length || 0);
+    (plan?.activate?.length || 0) +
+    (plan?.deactivate?.length || 0) +
+    (plan?.appendEntries?.length || 0);
   const reviewLabel = reviewItems.length === 1 ? "Review item" : "Review items";
 
   const toneForAction = (action) => {

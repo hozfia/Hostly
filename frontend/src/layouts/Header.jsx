@@ -4,6 +4,7 @@ import { style } from "@react-spectrum/s2/style" with { type: "macro" };
 import RocketQuickActions from '@react-spectrum/s2/icons/RocketQuickActions';
 import Cancel from '@react-spectrum/s2/icons/Cancel';
 import Folder from '@react-spectrum/s2/icons/Folder';
+import Add from '@react-spectrum/s2/icons/Add';
 
 const Header = ({
   searchValue,
@@ -11,6 +12,7 @@ const Header = ({
   onSavePress,
   onOpenHostsPress,
   onClearPress,
+  onAddEntryPress,
 }) => {
   return (
     <div
@@ -58,14 +60,18 @@ const Header = ({
             <Folder />
             <Text>Open Hosts</Text>
           </ActionButton>
+          <ActionButton onPress={onAddEntryPress}>
+            <Add />
+            <Text>Add Entry</Text>
+          </ActionButton>
           <ActionButton onPress={onSavePress}>
-          <RocketQuickActions />
-          <Text>Save</Text>
-            </ActionButton>
-            <ActionButton onPress={onClearPress}>
-          <Cancel />
-          <Text>Clear</Text>
-            </ActionButton>
+            <RocketQuickActions />
+            <Text>Save</Text>
+          </ActionButton>
+          <ActionButton onPress={onClearPress}>
+            <Cancel />
+            <Text>Clear</Text>
+          </ActionButton>
         </div>
       </div>
     </div>

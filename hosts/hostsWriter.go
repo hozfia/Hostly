@@ -82,22 +82,43 @@ func ApplyPlan(content string, plan Plan) (string, error) {
 		entryStates[line] = false
 	}
 
-	return ApplyEntryStates(content, entryStates)
+	result, err := ApplyEntryStates(content, entryStates)
+	if err != nil {
+		return "", err
+	}
+
+	for _, entry := range plan.AppendEntries {
+		if len(result) > 0 && result[len(result)-1] != '\n' {
+			result += "\n"
+		}
+		result += formatHostEntry(entry) + "\n"
+	}
+
+	return result, nil
 }
 
 // ApplyPlanToFile applies a generated plan directly to a hosts file on disk.
 func ApplyPlanToFile(path string, plan Plan) error {
-	entryStates := make(map[int]bool, len(plan.Activate)+len(plan.Deactivate))
-
-	for _, line := range plan.Activate {
-		entryStates[line] = true
+	content, err := os.ReadFile(path)
+	if err != nil {
+		return fmt.Errorf("read hosts file: %w", err)
 	}
 
-	for _, line := range plan.Deactivate {
-		entryStates[line] = false
+	updatedContent, err := ApplyPlan(string(content), plan)
+	if err != nil {
+		return err
 	}
 
-	return ApplyEntryStatesToFile(path, entryStates)
+	fileMode := os.FileMode(0o644)
+	if fileInfo, statErr := os.Stat(path); statErr == nil {
+		fileMode = fileInfo.Mode().Perm()
+	}
+
+	if err := os.WriteFile(path, []byte(updatedContent), fileMode); err != nil {
+		return fmt.Errorf("write hosts file: %w", err)
+	}
+
+	return nil
 }
 
 func formatHostEntry(entry HostEntry) string {
