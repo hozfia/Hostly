@@ -146,6 +146,7 @@ export const buildSavePayload = (itemsToSave) =>
     comment: item.comment || "",
     isActive: !!item.isActive,
     hasPendingStateChange: !!item.hasPendingStateChange,
+    isEdit: !!item.isEdit,
     children: item.children
       ? item.children.map((child) => ({
           id: child.id,

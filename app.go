@@ -52,6 +52,7 @@ type SaveHostsSelectionItem struct {
 	Comment               string                    `json:"comment,omitempty"`
 	IsActive              bool                      `json:"isActive"`
 	HasPendingStateChange bool                      `json:"hasPendingStateChange"`
+	IsEdit                bool                      `json:"isEdit,omitempty"`
 	Children              []SaveHostsSelectionEntry `json:"children,omitempty"`
 }
 
@@ -284,6 +285,21 @@ func buildRequestedStateChanges(parsed hosts.HostsFile, items []SaveHostsSelecti
 					},
 				)
 			}
+			continue
+		}
+
+		// For edit items, bypass the file lookup so the planner receives the edited values.
+		if item.IsEdit && item.Line > 0 {
+			requests = append(requests, hosts.RequestedStateChange{
+				Target: hosts.HostEntry{
+					Line:      item.Line,
+					IP:        item.IP,
+					Hostnames: append([]string(nil), item.Hostnames...),
+					Comment:   item.Comment,
+					Disabled:  !item.IsActive,
+				},
+				Activate: item.IsActive,
+			})
 			continue
 		}
 

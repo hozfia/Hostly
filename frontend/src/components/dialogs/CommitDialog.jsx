@@ -37,6 +37,7 @@ const itemToneStyles = style({
       deactivate: "notice-700",
       ignore: "gray-400",
       reject: "negative-700",
+      update: "informative-700",
     },
   },
   backgroundColor: {
@@ -46,6 +47,7 @@ const itemToneStyles = style({
       deactivate: "notice-subtle",
       ignore: "gray-100",
       reject: "negative-subtle",
+      update: "informative-subtle",
     },
   },
 });
@@ -65,6 +67,7 @@ const actionLabelStyles = style({
       deactivate: "notice-700",
       ignore: "gray-400",
       reject: "negative-700",
+      update: "informative-700",
     },
   },
   backgroundColor: {
@@ -74,6 +77,7 @@ const actionLabelStyles = style({
       deactivate: "notice-subtle",
       ignore: "gray-200",
       reject: "negative-subtle",
+      update: "informative-subtle",
     },
   },
   color: {
@@ -83,6 +87,7 @@ const actionLabelStyles = style({
       deactivate: "notice-700",
       ignore: "neutral",
       reject: "negative-700",
+      update: "informative-700",
     },
   },
 });
@@ -100,7 +105,8 @@ const CommitDialog = ({
   const actionableCount =
     (plan?.activate?.length || 0) +
     (plan?.deactivate?.length || 0) +
-    (plan?.appendEntries?.length || 0);
+    (plan?.appendEntries?.length || 0) +
+    (plan?.updateEntries?.length || 0);
   const reviewLabel = reviewItems.length === 1 ? "Review item" : "Review items";
 
   const toneForAction = (action) => {
@@ -113,6 +119,8 @@ const CommitDialog = ({
         return "ignore";
       case "REJECT":
         return "reject";
+      case "UPDATE":
+        return "update";
       default:
         return undefined;
     }

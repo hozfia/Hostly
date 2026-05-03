@@ -12,15 +12,23 @@ const (
 	actionDeactivate = "DEACTIVATE"
 	actionIgnore     = "IGNORE"
 	actionReject     = "REJECT"
+	actionUpdate     = "UPDATE"
 )
+
+// UpdateEntry pairs a line number with the replacement content.
+type UpdateEntry struct {
+	Line  int       `json:"line"`
+	Entry HostEntry `json:"entry"`
+}
 
 // Plan describes the final line-level changes to apply to a hosts file.
 type Plan struct {
-	Activate      []int       `json:"activate"`
-	Deactivate    []int       `json:"deactivate"`
-	Ignore        []int       `json:"ignore"`
-	Reject        []string    `json:"reject"`
-	AppendEntries []HostEntry `json:"appendEntries"`
+	Activate      []int         `json:"activate"`
+	Deactivate    []int         `json:"deactivate"`
+	Ignore        []int         `json:"ignore"`
+	Reject        []string      `json:"reject"`
+	AppendEntries []HostEntry   `json:"appendEntries"`
+	UpdateEntries []UpdateEntry `json:"updateEntries"`
 }
 
 // ReviewItem is a structured review row for the UI.
@@ -146,6 +154,7 @@ func BuildPlan(requests []RequestedStateChange, hostsFile HostsFile) (Plan, Revi
 	rejectItems := make([]ReviewItem, 0)
 	appendEntries := make([]HostEntry, 0)
 	appendReviewItems := make([]ReviewItem, 0)
+	updatesByLine := make(map[int]UpdateEntry)
 
 	for _, request := range dedupedRequests {
 		// Entries with no line number are new entries to be appended to the file.
@@ -160,6 +169,18 @@ func BuildPlan(requests []RequestedStateChange, hostsFile HostsFile) (Plan, Revi
 		if request.Target.Line > 0 {
 			requestOrder = append(requestOrder, request.Target.Line)
 			requestsByLine[request.Target.Line] = cloneRequestedStateChange(request)
+		}
+
+		// If the request changes content (IP, hostnames, or comment), handle as an in-place update.
+		existingEntry, found := entryByLine(workingHosts, request.Target.Line)
+		if found && isContentChanged(existingEntry, request.Target) {
+			updatedEntry := cloneHostEntry(request.Target)
+			updatedEntry.Disabled = !request.Activate
+			update := UpdateEntry{Line: request.Target.Line, Entry: updatedEntry}
+			updatesByLine[request.Target.Line] = update
+			requestOutcomesByLine[request.Target.Line] = reviewItem(actionUpdate, updatedEntry, "user edited entry")
+			workingHosts = applyUpdateInMemory(workingHosts, update)
+			continue
 		}
 
 		var (
@@ -194,7 +215,31 @@ func BuildPlan(requests []RequestedStateChange, hostsFile HostsFile) (Plan, Revi
 	finalPlan.Ignore = make([]int, 0)
 	finalPlan.Reject = make([]string, 0, len(rejectItems))
 
+	// Remove update lines from activate/deactivate — they are handled separately.
+	filteredActivate := make([]int, 0, len(finalPlan.Activate))
+	for _, line := range finalPlan.Activate {
+		if _, isUpdate := updatesByLine[line]; !isUpdate {
+			filteredActivate = append(filteredActivate, line)
+		}
+	}
+	filteredDeactivate := make([]int, 0, len(finalPlan.Deactivate))
+	for _, line := range finalPlan.Deactivate {
+		if _, isUpdate := updatesByLine[line]; !isUpdate {
+			filteredDeactivate = append(filteredDeactivate, line)
+		}
+	}
+	finalPlan.Activate = filteredActivate
+	finalPlan.Deactivate = filteredDeactivate
+	finalPlan.UpdateEntries = sortedUpdateEntries(updatesByLine)
+
 	review := newReviewSummary()
+
+	activatedLines := sliceToLineSet(finalPlan.Activate)
+	deactivatedLines := sliceToLineSet(finalPlan.Deactivate)
+	updateLines := make(map[int]struct{}, len(updatesByLine))
+	for line := range updatesByLine {
+		updateLines[line] = struct{}{}
+	}
 
 	for _, line := range finalPlan.Activate {
 		request := requestsByLine[line]
@@ -228,8 +273,13 @@ func BuildPlan(requests []RequestedStateChange, hostsFile HostsFile) (Plan, Revi
 		review.Items = append(review.Items, item)
 	}
 
-	activatedLines := sliceToLineSet(finalPlan.Activate)
-	deactivatedLines := sliceToLineSet(finalPlan.Deactivate)
+	for _, update := range finalPlan.UpdateEntries {
+		item := reviewItem(actionUpdate, update.Entry, "user edited entry")
+		if outcome, ok := requestOutcomesByLine[update.Line]; ok && outcome.Action == actionUpdate {
+			item = outcome
+		}
+		review.Items = append(review.Items, item)
+	}
 
 	for _, line := range requestOrder {
 		if _, ok := rejectedRequestLines[line]; ok {
@@ -239,6 +289,9 @@ func BuildPlan(requests []RequestedStateChange, hostsFile HostsFile) (Plan, Revi
 			continue
 		}
 		if _, ok := deactivatedLines[line]; ok {
+			continue
+		}
+		if _, ok := updateLines[line]; ok {
 			continue
 		}
 
@@ -289,6 +342,7 @@ func newPlan() Plan {
 		Ignore:        []int{},
 		Reject:        []string{},
 		AppendEntries: []HostEntry{},
+		UpdateEntries: []UpdateEntry{},
 	}
 }
 
@@ -518,4 +572,49 @@ func sliceToLineSet(lines []int) map[int]struct{} {
 		set[line] = struct{}{}
 	}
 	return set
+}
+
+func isContentChanged(existing, requested HostEntry) bool {
+	if !ipsEqual(existing.IP, requested.IP) {
+		return true
+	}
+	existingNorm := normalizedHostnames(existing.Hostnames)
+	requestedNorm := normalizedHostnames(requested.Hostnames)
+	if len(existingNorm) != len(requestedNorm) {
+		return true
+	}
+	existingSet := make(map[string]struct{}, len(existingNorm))
+	for _, h := range existingNorm {
+		existingSet[h] = struct{}{}
+	}
+	for _, h := range requestedNorm {
+		if _, ok := existingSet[h]; !ok {
+			return true
+		}
+	}
+	return strings.TrimSpace(existing.Comment) != strings.TrimSpace(requested.Comment)
+}
+
+func applyUpdateInMemory(hostsFile HostsFile, update UpdateEntry) HostsFile {
+	next := cloneHostsFile(hostsFile)
+	for i, entry := range next.Entries {
+		if entry.Line == update.Line {
+			next.Entries[i] = cloneHostEntry(update.Entry)
+			return next
+		}
+	}
+	return next
+}
+
+func sortedUpdateEntries(updatesByLine map[int]UpdateEntry) []UpdateEntry {
+	lines := make([]int, 0, len(updatesByLine))
+	for line := range updatesByLine {
+		lines = append(lines, line)
+	}
+	sort.Ints(lines)
+	result := make([]UpdateEntry, 0, len(lines))
+	for _, line := range lines {
+		result = append(result, updatesByLine[line])
+	}
+	return result
 }

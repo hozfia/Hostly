@@ -15,6 +15,7 @@ import {
 } from "@react-spectrum/s2";
 
 import CheckmarkCircle from "@react-spectrum/s2/icons/CheckmarkCircle";
+import Edit from "@react-spectrum/s2/icons/Edit";
 import Tag from "@react-spectrum/s2/icons/Tag";
 import Document from "@react-spectrum/s2/illustrations/linear/Document";
 import FolderOpen from "@react-spectrum/s2/illustrations/linear/FolderOpen";
@@ -31,6 +32,7 @@ const ContentTable = ({
   setSelected,
   onConfirmGrouping,
   onAddSelectedToCurrent,
+  onEditEntry,
   existingGroups,
   filePath,
   fileName,
@@ -40,6 +42,8 @@ const ContentTable = ({
 }) => {
   const [groupingOpen, setGroupingOpen] = useState(false);
   const searchValue = useSelector((state) => state.ui.searchValue);
+  const singleSelected = selected !== "all" && selected?.size === 1;
+  const selectedRow = singleSelected ? rows.find((r) => selected.has(r.id)) : null;
 
   return (
     <>
@@ -92,6 +96,13 @@ const ContentTable = ({
                 <ActionButton onPress={() => setGroupingOpen(true)}>
                   <Tag />
                   <Text>Grouping</Text>
+                </ActionButton>
+                <ActionButton
+                  isDisabled={!singleSelected}
+                  onPress={() => { if (selectedRow) onEditEntry?.(selectedRow); }}
+                >
+                  <Edit />
+                  <Text>Edit</Text>
                 </ActionButton>
               </ActionBar>
             )}

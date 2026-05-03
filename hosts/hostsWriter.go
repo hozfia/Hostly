@@ -87,6 +87,13 @@ func ApplyPlan(content string, plan Plan) (string, error) {
 		return "", err
 	}
 
+	if len(plan.UpdateEntries) > 0 {
+		result, err = applyLineUpdates(result, plan.UpdateEntries)
+		if err != nil {
+			return "", err
+		}
+	}
+
 	for _, entry := range plan.AppendEntries {
 		if len(result) > 0 && result[len(result)-1] != '\n' {
 			result += "\n"
@@ -95,6 +102,26 @@ func ApplyPlan(content string, plan Plan) (string, error) {
 	}
 
 	return result, nil
+}
+
+func applyLineUpdates(content string, updates []UpdateEntry) (string, error) {
+	lineEnding := "\n"
+	if strings.Contains(content, "\r\n") {
+		lineEnding = "\r\n"
+	}
+
+	normalizedContent := strings.ReplaceAll(content, "\r\n", "\n")
+	lines := strings.Split(normalizedContent, "\n")
+
+	for _, update := range updates {
+		lineIndex := update.Line - 1
+		if lineIndex < 0 || lineIndex >= len(lines) {
+			continue
+		}
+		lines[lineIndex] = formatHostEntry(update.Entry)
+	}
+
+	return strings.Join(lines, lineEnding), nil
 }
 
 // ApplyPlanToFile applies a generated plan directly to a hosts file on disk.

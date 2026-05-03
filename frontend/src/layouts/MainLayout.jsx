@@ -8,11 +8,13 @@ import Sidebar from "./Sidebar";
 import ContentTable from "../components/ContentTable";
 import CommitDialog from "../components/dialogs/CommitDialog";
 import AddEntryDialog from "../components/dialogs/AddEntryDialog";
+import EditEntryDialog from "../components/dialogs/EditEntryDialog";
 
 import { setSearchValue, openAddEntryDialog, closeAddEntryDialog } from "../store/uiSlice";
 import { setItems } from "../store/groupsSlice";
 import {
   addToCurrentSelected,
+  upsertToCurrentSelected,
   clearCurrentSelected,
   closeCommitDialog,
   toggleItemActive,
@@ -46,6 +48,9 @@ const MainLayout = () => {
   const isCommitDialogOpen = useSelector((state) => state.selection.isCommitDialogOpen);
   const commitPreview = useSelector((state) => state.selection.commitPreview);
   const isAddEntryDialogOpen = useSelector((state) => state.ui.isAddEntryDialogOpen);
+
+  const [editTarget, setEditTarget] = useState(null);
+  const [isEditDialogOpen, setIsEditDialogOpen] = useState(false);
 
   const hasRequestedInitialFile = useRef(false);
   const isOpeningFileRef = useRef(false);
@@ -140,6 +145,33 @@ const MainLayout = () => {
 
     dispatch(setItems(nextItems));
     dispatch(persistGroupsThunk(nextItems));
+    setSelectedKeys(new Set());
+  };
+
+  const handleEditEntry = (row) => {
+    setEditTarget(row);
+    setIsEditDialogOpen(true);
+  };
+
+  const handleEditConfirm = (edited) => {
+    if (!editTarget) return;
+    dispatch(upsertToCurrentSelected({
+      id: editTarget.id,
+      entryId: editTarget.id,
+      line: editTarget.line,
+      name: edited.hostnames.join(", "),
+      ip: edited.ip,
+      hostnames: [...edited.hostnames],
+      comment: edited.comment || "",
+      raw: "",
+      disabled: false,
+      isActive: true,
+      hasPendingStateChange: false,
+      isEdit: true,
+    }));
+    setSelectedKeys(new Set());
+    setIsEditDialogOpen(false);
+    setEditTarget(null);
   };
 
   const handleAddSelectedRowsToCurrent = (rowsToAdd) => {
@@ -193,6 +225,7 @@ const MainLayout = () => {
           setSelected={setSelectedKeys}
           onConfirmGrouping={handleConfirmGrouping}
           onAddSelectedToCurrent={handleAddSelectedRowsToCurrent}
+          onEditEntry={handleEditEntry}
           existingGroups={items.map((item) => item.name)}
           filePath={selectedFilePath}
           fileName={selectedFileName}
@@ -230,6 +263,13 @@ const MainLayout = () => {
           }));
           dispatch(addToCurrentSelected(newItems));
         }}
+      />
+
+      <EditEntryDialog
+        isOpen={isEditDialogOpen}
+        onClose={() => { setIsEditDialogOpen(false); setEditTarget(null); }}
+        entry={editTarget}
+        onEdit={handleEditConfirm}
       />
 
       <ToastContainer />

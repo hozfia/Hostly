@@ -19,6 +19,15 @@ const selectionSlice = createSlice({
         }
       });
     },
+    upsertToCurrentSelected: (state, action) => {
+      const item = action.payload;
+      const existingIndex = state.currentSelectedItems.findIndex((i) => i.id === item.id);
+      if (existingIndex >= 0) {
+        state.currentSelectedItems[existingIndex] = item;
+      } else {
+        state.currentSelectedItems.push(item);
+      }
+    },
     toggleItemActive: (state, action) => {
       const { itemId, isActive } = action.payload;
       const item = state.currentSelectedItems.find((i) => i.id === itemId);
@@ -55,6 +64,6 @@ const selectionSlice = createSlice({
   },
 });
 
-export const { addToCurrentSelected, clearCurrentSelected, closeCommitDialog, toggleItemActive } =
+export const { addToCurrentSelected, upsertToCurrentSelected, clearCurrentSelected, closeCommitDialog, toggleItemActive } =
   selectionSlice.actions;
 export default selectionSlice.reducer;
