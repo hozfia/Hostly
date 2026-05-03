@@ -15,14 +15,7 @@ const CurrentSelected = ({ items = [], onToggleItemActive }) => {
     >
       {(item) => (
         <ListViewItem id={item.id} textValue={item.name}>
-          <div
-            className={style({
-              display: "flex",
-              justifyContent: "space-between",
-              alignItems: "center",
-              width: "100%",
-            })}
-          >
+          <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", gridColumn: "1 / -1", padding: "0 16px" }}>
             {/* LEFT SIDE (title + description stacked) */}
             <div
               className={style({

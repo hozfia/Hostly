@@ -56,20 +56,18 @@ const Labels = ({ items, onAddToCurrent })=> {
 >
   {(item) => (
     <ListViewItem id={item.id} textValue={item.name}>
-      {item.children ? <Folder /> : <File />}
-      <Text>{item.name}</Text>
-
-      <ActionButton
-  onPressStart={(e) => {
-    e.continuePropagation = false; // ✅ correct way
-  }}
-  onPress={() => {
-    onAddToCurrent(item);
-  }}
->
-  <Add />
-</ActionButton>
-
+      <div className={style({ display: "flex", alignItems: "center", gap: 12, flex: 1 })}>
+        <ActionButton
+          onPressStart={(e) => { e.continuePropagation = false; }}
+          onPress={() => { onAddToCurrent(item); }}
+        >
+          <Add />
+        </ActionButton>
+        <div className={style({ display: "flex", alignItems: "center", gap: 4 })}>
+          {item.children ? <Folder /> : <File />}
+          <Text>{item.name}</Text>
+        </div>
+      </div>
     </ListViewItem>
   )}
 </ListView>

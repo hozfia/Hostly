@@ -47,10 +47,8 @@ const selectionSlice = createSlice({
         state.commitPreview = action.payload;
         state.isCommitDialogOpen = true;
       })
-      .addCase(applyCommitThunk.fulfilled, (state, action) => {
-        if (action.payload) {
-          state.currentSelectedItems = action.payload.nextCurrentSelectedItems;
-        }
+      .addCase(applyCommitThunk.fulfilled, (state) => {
+        state.currentSelectedItems = [];
         state.isCommitDialogOpen = false;
         state.commitPreview = null;
       });
