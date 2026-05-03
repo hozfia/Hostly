@@ -7,7 +7,8 @@ import {
   Text,ActionButton
 } from "@react-spectrum/s2";
 import Add from '@react-spectrum/s2/icons/Add';
-import DeviceMultiscreen from '@react-spectrum/s2/icons/DeviceMultiscreen';
+import File from '@react-spectrum/s2/icons/File';
+import Folder from '@react-spectrum/s2/icons/Folder';
 
 
 
@@ -55,7 +56,7 @@ const Labels = ({ items, onAddToCurrent })=> {
 >
   {(item) => (
     <ListViewItem id={item.id} textValue={item.name}>
-      {item.icon}
+      {item.children ? <Folder /> : <File />}
       <Text>{item.name}</Text>
 
       <ActionButton
